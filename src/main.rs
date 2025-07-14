@@ -1,18 +1,14 @@
-use std::fs::File;
-use rodio::{Decoder, OutputStream, source::Source};
+// Modules
+mod song;
+mod player;
+
+use crate::song::Song;
+use crate::player::Player;
 
 fn main() {
-
-    let stream_handle = rodio::OutputStreamBuilder::open_default_stream()
-        .expect("open default audio stream");
-
-    let sink = rodio::Sink::connect_new(&stream_handle.mixer());
-
-    let file = File::open("examples/music.flac").unwrap();
-
-    let source = Decoder::try_from(file).unwrap();
-
-    stream_handle.mixer().add(source);
-
-    std::thread::sleep(std::time::Duration::from_secs(5));
+    let song : Song = Song::new("examples/music.flac");
+    let song2 : Song = Song::new("examples/music2.flac");
+    let player : Player = Player::new();
+    player.play(&song2);
+    player.play(&song);
 }
