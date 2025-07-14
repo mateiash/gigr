@@ -26,11 +26,14 @@ impl Player {
         }
     }
 
-    pub fn play(&self, song : &Song) -> () {
+    pub fn add_to_queue(&self, song : &Song) -> () {
         let file = File::open(song.file_path.clone()).unwrap();
         let buffered = BufReader::new(file);
         let source = Decoder::try_from(buffered).unwrap();
         self.sink.append(source);
+    }
+
+    pub fn sleep_until_end(&self) -> () {
         self.sink.sleep_until_end();
     }
 }
