@@ -15,6 +15,8 @@ pub struct Player{
 
     queue : VecDeque<Song>,
     current_song : Option<Song>,
+
+    volume : f32,
 }
 
 impl Player {
@@ -26,8 +28,11 @@ impl Player {
         Self {
             sink : sink,
             stream_handle : stream_handle,
+
             queue : VecDeque::new(),
             current_song : None,
+
+            volume : 1.0,
         }
     }
 
@@ -35,11 +40,6 @@ impl Player {
         self.queue.push_back(song);
     }
 
-    /*
-    pub fn sleep_until_end(&self) -> () {
-        self.sink.sleep_until_end();
-    }
-    */
     pub fn update(&mut self) -> () {
         if !self.sink.empty() {
             return;
@@ -72,4 +72,41 @@ impl Player {
             },
         }
     }
+
+    pub fn skip_current_song(&self) -> () {
+        self.sink.skip_one();
+    }
+
+    fn set_volume(&mut self, volume : f32) -> () {
+        if volume > 1.0 {
+            self.volume = 1.0;
+            self.sink.set_volume(1.0);
+        } else if volume < 0.0 {
+            self.volume = 0.0;
+            self.sink.set_volume(0.0);
+        } else {
+            self.volume = volume;
+            self.sink.set_volume(volume);
+        }
+    }
+
+    pub fn change_volume(&mut self, amount : f32) -> () {
+        self.set_volume(self.volume + amount);
+    }
+
+    pub fn volume(&self) -> f32 {
+        return self.volume;
+    }
+
+    pub fn play_pause(&self) -> () {
+        match self.sink.is_paused() {
+            true => {self.sink.play();},
+            false => {self.sink.pause();},
+        }
+    }
+
+    pub fn playing(&self) -> bool {
+        return !self.sink.is_paused();
+    }
+
 }

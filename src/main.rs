@@ -1,4 +1,8 @@
 use std::io;
+use std::path::Path;
+
+use std::fs::read_dir;
+
 use tui::{
     backend::CrosstermBackend,
     Terminal
@@ -20,18 +24,42 @@ use crate::ui::ui;
 
 fn main() -> Result<(), io::Error> {
 
-    
+    // UI INIT
+
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let song : Song = Song::new("/home/david/Documents/Projects/gigr/target/examples/music.flac");
-    let song2 : Song = Song::new("/home/david/Documents/Projects/gigr/target/examples/music2.flac");
-    let mut player : Player = Player::new();
-    player.add_to_queue(song);
-    player.add_to_queue(song2);
+    // ADDING SONGS
+
+    let mut player = Player::new();
+
+    let path = Path::new("/home/david/Music");
+    
+
+    if path.is_dir() {
+
+        let mut entries: Vec<_> = read_dir(path)
+            .unwrap()
+            .map(|res| res.unwrap())
+            .collect();
+
+        entries.sort_by_key(|dir| dir.path());
+
+
+        for entry in entries {
+            let path = entry.path();
+
+            if path.is_file() {
+                let song = Song::new(&path.to_str().unwrap());
+                player.add_to_queue(song);
+            } 
+        }
+    }
+
+    // UI LOOP
 
     loop {
         player.update();
@@ -41,8 +69,13 @@ fn main() -> Result<(), io::Error> {
         // Basic event handling
         if crossterm::event::poll(std::time::Duration::from_millis(200))? {
             if let Event::Key(key) = event::read()? {
-                if key.code == KeyCode::Char('q') {
-                    break;
+                match key.code {
+                    KeyCode::Char('q') => {break},
+                    KeyCode::Char('l') => {player.skip_current_song()},
+                    KeyCode::Char('j') => {player.change_volume(-0.05)},
+                    KeyCode::Char('k') => {player.change_volume(0.05)},
+                    KeyCode::Char(' ') => {player.play_pause()},
+                    _ => {},
                 }
             }
         }
