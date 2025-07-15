@@ -20,4 +20,8 @@ impl Song {
 
         }
     }
+
+    pub fn title_clone(&self) -> String{
+        return self.title.clone();
+    }
 }

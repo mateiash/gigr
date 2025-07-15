@@ -5,12 +5,6 @@ use tui::{
 use tui::text::Span;
 use tui::text::Spans;
 
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
-
 use crate::player::Player;
 
 pub fn ui<B: Backend>(f: &mut Frame<B>, player : &Player) {
@@ -31,18 +25,29 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, player : &Player) {
         .split(f.size());
 
     let title_bar = Paragraph::new(vec![
-            Spans::from(Span::raw(format!("  {}", song_title))),
+            Spans::from(Span::raw(format!("   {}", song_title))),
         ]).block(
     Block::default()
-         .title("gigr - Now playing:")
+         .title(" gigr - Now playing: ")
          .borders(Borders::ALL));
 
     f.render_widget(title_bar, chunks[0]);
 
-    let tracks = Block::default()
-         .title("Tracks")
-         .borders(Borders::ALL);
 
+    // TRACKS
+
+    let mut track_lines = Vec::new();
+
+    for song in player.queue() {
+        let span = Span::raw(format!("  {}", song.title_clone()));
+        track_lines.push(Spans::from(span));
+    }
+
+
+    let tracks = Paragraph::new(track_lines).block(
+    Block::default()
+         .title(" Upcoming Tracks: ")
+         .borders(Borders::ALL));
     f.render_widget(tracks, chunks[1]);
 
     let controls = Paragraph::new(vec![
@@ -54,7 +59,7 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, player : &Player) {
             }, volume), Style::default().add_modifier(Modifier::BOLD)))
     ]).block(
     Block::default()
-         .title("Controls")
+         .title(" Controls: ")
          .borders(Borders::ALL));
 
     f.render_widget(controls, chunks[2]);

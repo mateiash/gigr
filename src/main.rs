@@ -1,5 +1,8 @@
+use std::env;
+
 use std::io;
-use std::path::Path;
+
+use std::path::PathBuf;
 
 use std::fs::read_dir;
 
@@ -36,8 +39,7 @@ fn main() -> Result<(), io::Error> {
 
     let mut player = Player::new();
 
-    let path = Path::new("/home/david/Music");
-    
+    let path = expand_tilde("~/Music");
 
     if path.is_dir() {
 
@@ -53,8 +55,12 @@ fn main() -> Result<(), io::Error> {
             let path = entry.path();
 
             if path.is_file() {
-                let song = Song::new(&path.to_str().unwrap());
-                player.add_to_queue(song);
+                if let Some(ext) = path.extension() {
+                    if ext == "mp3" || ext == "flac" || ext == "wav" {
+                        let song = Song::new(&path.to_str().unwrap());
+                        player.add_to_queue(song);
+                    }
+                }
             } 
         }
     }
@@ -95,4 +101,15 @@ fn main() -> Result<(), io::Error> {
 
     Ok(())
 
+}
+
+fn expand_tilde(path: &str) -> PathBuf {
+    if path.starts_with("~/") {
+        if let Some(home) = env::var_os("HOME") {
+            let mut p = PathBuf::from(home);
+            p.push(&path[2..]);
+            return p;
+        }
+    }
+    PathBuf::from(path)
 }

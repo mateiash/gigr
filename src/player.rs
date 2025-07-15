@@ -65,7 +65,7 @@ impl Player {
     pub fn current_song_title(&self) -> String {
         match &self.current_song {
             Some(song) => {
-                return song.title.clone();
+                return song.title_clone();
             },
             None => {
                 return "Nothing".to_string();
@@ -107,6 +107,10 @@ impl Player {
 
     pub fn playing(&self) -> bool {
         return !self.sink.is_paused();
+    }
+
+    pub fn queue(&self) -> &VecDeque<Song> {
+        return &self.queue;
     }
 
 }
