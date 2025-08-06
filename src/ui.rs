@@ -33,12 +33,12 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, player : &Player) {
 
     f.render_widget(title_bar, chunks[0]);
 
-
     // TRACKS
 
     let mut track_lines = Vec::new();
 
-    for song in player.queue() {
+    for n in player.player_index..player.queue().len() {
+        let song = player.queue().get(n).unwrap();
         let span = Span::raw(format!("  {}", song.title_clone()));
         track_lines.push(Spans::from(span));
     }

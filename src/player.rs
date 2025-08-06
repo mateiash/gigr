@@ -13,7 +13,7 @@ pub struct Player{
     sink : Sink,
 
     queue : Vec<Song>,
-    player_index : usize,
+    pub player_index : usize,
 
     current_song : Option<Song>,
 
