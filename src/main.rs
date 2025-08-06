@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use std::fs::read_dir;
 
+use rodio::play;
 use tui::{
     backend::CrosstermBackend,
     Terminal
@@ -78,6 +79,7 @@ fn main() -> Result<(), io::Error> {
                 match key.code {
                     KeyCode::Char('q') => {break},
                     KeyCode::Char('l') => {player.skip_current_song()},
+                    KeyCode::Char('h') => {player.return_last_song()},
                     KeyCode::Char('j') => {player.change_volume(-0.05)},
                     KeyCode::Char('k') => {player.change_volume(0.05)},
                     KeyCode::Char(' ') => {player.play_pause()},

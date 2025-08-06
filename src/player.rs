@@ -13,6 +13,7 @@ pub struct Player{
     stream_handle : OutputStream,
     sink : Sink,
 
+    past_queue : VecDeque<Song>,
     queue : VecDeque<Song>,
     current_song : Option<Song>,
 
@@ -29,6 +30,7 @@ impl Player {
             sink : sink,
             stream_handle : stream_handle,
 
+            past_queue : VecDeque::new(),
             queue : VecDeque::new(),
             current_song : None,
 
@@ -47,9 +49,19 @@ impl Player {
 
         match self.queue.pop_front() {
             Some(song) => {
+
+                match &self.current_song {
+                    Some(curr_song) => {
+                        let current_song_clone = Song::new(curr_song.file_path_clone().as_str());
+                        self.past_queue.push_front(current_song_clone);
+                    }
+                    None => {}
+                }
+
                 self.current_song = Some(song);
 
                 let song_ref = self.current_song.as_ref().unwrap();
+
                 let file = File::open(song_ref.file_path.clone()).unwrap();
                 let buffered = BufReader::new(file);
                 let source: Decoder<BufReader<File>> = Decoder::try_from(buffered).unwrap();
@@ -73,7 +85,48 @@ impl Player {
         }
     }
 
-    pub fn skip_current_song(&self) -> () {
+    pub fn skip_current_song(&mut self) -> () {
+        if self.sink.empty() {
+            return;
+        }
+
+        match &self.current_song {
+            Some(song) => {
+                let song_clone = Song::new(song.file_path_clone().as_str());
+                self.past_queue.push_front(song_clone);
+
+                self.current_song = None;
+            }
+            None => {}
+
+        }
+
+        self.sink.skip_one();
+    }
+
+    pub fn return_last_song(&mut self) -> () {
+        if self.sink.empty() {
+            return;
+        }
+
+        match &self.current_song {
+            Some(song) => {
+                let current_song_clone = Song::new(song.file_path_clone().as_str());
+                self.queue.push_front(current_song_clone);
+
+                match self.past_queue.pop_front() {
+                    Some(prev_song) => {
+                        self.queue.push_front(prev_song);
+                    }
+                    None => {}
+                }
+
+                self.current_song = None;
+            }
+            None => {}
+
+        }
+        
         self.sink.skip_one();
     }
 

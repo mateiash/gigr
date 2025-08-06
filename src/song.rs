@@ -24,4 +24,8 @@ impl Song {
     pub fn title_clone(&self) -> String{
         return self.title.clone();
     }
+
+    pub fn file_path_clone(&self) -> String{
+        return self.file_path.clone();
+    }
 }
