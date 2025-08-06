@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use std::io::BufReader;
 
 use std::fs::File;
@@ -13,9 +12,12 @@ pub struct Player{
     stream_handle : OutputStream,
     sink : Sink,
 
-    past_queue : VecDeque<Song>,
-    queue : VecDeque<Song>,
+    queue : Vec<Song>,
+    player_index : usize,
+
     current_song : Option<Song>,
+
+    idle_state : bool,
 
     volume : f32,
 }
@@ -30,16 +32,19 @@ impl Player {
             sink : sink,
             stream_handle : stream_handle,
 
-            past_queue : VecDeque::new(),
-            queue : VecDeque::new(),
+            queue : Vec::new(),
+            player_index : 0,
+
             current_song : None,
+
+            idle_state : false,
 
             volume : 1.0,
         }
     }
 
     pub fn add_to_queue(&mut self, song : Song) -> () {
-        self.queue.push_back(song);
+        self.queue.push(song);
     }
 
     pub fn update(&mut self) -> () {
@@ -47,39 +52,36 @@ impl Player {
             return;
         }
 
-        match self.queue.pop_front() {
-            Some(song) => {
+        self.player_index += 1;
 
-                match &self.current_song {
-                    Some(curr_song) => {
-                        let current_song_clone = Song::new(curr_song.file_path_clone().as_str());
-                        self.past_queue.push_front(current_song_clone);
-                    }
-                    None => {}
-                }
-
-                self.current_song = Some(song);
-
-                let song_ref = self.current_song.as_ref().unwrap();
-
-                let file = File::open(song_ref.file_path.clone()).unwrap();
-                let buffered = BufReader::new(file);
-                let source: Decoder<BufReader<File>> = Decoder::try_from(buffered).unwrap();
-                self.sink.append(source);
-
-            }
-            None => {
-                self.current_song = None;
-            }
+        if self.player_index > self.queue.len() {
+            //self.player_index = 0;
+            self.idle_state = true;
+            return;
+        } else {
+            self.idle_state = false;
         }
+
+        let song_ref = self.queue.get(self.player_index - 1).unwrap();
+
+        self.current_song = Some(Song::new(&song_ref.file_path_clone()));
+
+        let file = File::open(song_ref.file_path.clone()).unwrap();
+        let buffered = BufReader::new(file);
+        let source: Decoder<BufReader<File>> = Decoder::try_from(buffered).unwrap();
+        self.sink.append(source);
     }
 
     pub fn current_song_title(&self) -> String {
-        match &self.current_song {
-            Some(song) => {
-                return song.title_clone();
+        match self.idle_state {
+            false => {
+                match &self.current_song {
+                    Some(curr_song) => {return curr_song.title_clone();},
+                    None => {return "Nothing".to_string();},
+                }
+                
             },
-            None => {
+            true => {
                 return "Nothing".to_string();
             },
         }
@@ -90,17 +92,6 @@ impl Player {
             return;
         }
 
-        match &self.current_song {
-            Some(song) => {
-                let song_clone = Song::new(song.file_path_clone().as_str());
-                self.past_queue.push_front(song_clone);
-
-                self.current_song = None;
-            }
-            None => {}
-
-        }
-
         self.sink.skip_one();
     }
 
@@ -109,22 +100,10 @@ impl Player {
             return;
         }
 
-        match &self.current_song {
-            Some(song) => {
-                let current_song_clone = Song::new(song.file_path_clone().as_str());
-                self.queue.push_front(current_song_clone);
-
-                match self.past_queue.pop_front() {
-                    Some(prev_song) => {
-                        self.queue.push_front(prev_song);
-                    }
-                    None => {}
-                }
-
-                self.current_song = None;
-            }
-            None => {}
-
+        match self.player_index {
+            0 => {},
+            1 => {self.player_index = 0},
+            _ => {self.player_index -= 2},
         }
         
         self.sink.skip_one();
@@ -162,7 +141,7 @@ impl Player {
         return !self.sink.is_paused();
     }
 
-    pub fn queue(&self) -> &VecDeque<Song> {
+    pub fn queue(&self) -> &Vec<Song> {
         return &self.queue;
     }
 
