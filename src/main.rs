@@ -6,36 +6,23 @@ use std::path::PathBuf;
 
 use std::fs::read_dir;
 
-use rodio::play;
-use tui::{
-    backend::CrosstermBackend,
-    Terminal
-};
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
+use color_eyre::Result;
+use crossterm::event::{self, Event};
+use ratatui::{DefaultTerminal, Frame};
 
 // Modules
 mod song;
 mod player;
-mod ui;
+mod app;
 
 use crate::song::Song;
 use crate::player::Player;
-use crate::ui::ui;
 
-fn main() -> Result<(), io::Error> {
+use crate::app::{App};
 
-    // UI INIT
+fn main() -> Result<()> {
 
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-
+    color_eyre::install()?;
     // ADDING SONGS
 
     let mut player = Player::new();
@@ -66,42 +53,14 @@ fn main() -> Result<(), io::Error> {
         }
     }
 
-    // UI LOOP
-
-    loop {
-        player.update();
-
-        terminal.draw(|f| ui(f, &player))?;
-        
-        // Basic event handling
-        if crossterm::event::poll(std::time::Duration::from_millis(200))? {
-            if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char('q') => {break},
-                    KeyCode::Char('l') => {player.skip_current_song()},
-                    KeyCode::Char('h') => {player.return_last_song()},
-                    KeyCode::Char('j') => {player.change_volume(-0.05)},
-                    KeyCode::Char('k') => {player.change_volume(0.05)},
-                    KeyCode::Char(' ') => {player.play_pause()},
-                    _ => {},
-                }
-            }
-        }
-
-    }
-
-    // restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    // EVERYTHING UI
     
-    //player.sleep_until_end();
+    let mut terminal = ratatui::init();
+    let app_result = App::default().run(&mut terminal, &mut player);
+    ratatui::restore();
+    app_result
 
-    Ok(())
+
 
 }
 

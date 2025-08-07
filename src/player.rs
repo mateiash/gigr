@@ -146,3 +146,12 @@ impl Player {
     }
 
 }
+
+#[derive(Debug)]
+pub enum PlayerCommand {
+    Skip,
+    Prev,
+    PlayPause,
+    VolumeUp,
+    VolumeDown,
+}
