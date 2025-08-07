@@ -5,6 +5,8 @@ use color_eyre::Result;
 use ratatui::{DefaultTerminal, Frame, style::Stylize, symbols::border};
 use ratatui::widgets::{Widget, Block, Paragraph};
 use ratatui::prelude::{Rect, Buffer, Line, Text, Layout, Direction, Constraint};
+use ratatui::text::{Span};
+use ratatui::style::{Style, Modifier};
 
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
@@ -15,6 +17,10 @@ use crate::player::{Player, PlayerCommand};
 pub struct App {
     exit: bool,
     queued_command : Option<PlayerCommand>,
+
+    volume : u8,
+    song_title : String,
+    playing : bool,
 }
 
 impl App {
@@ -34,9 +40,14 @@ impl App {
                 },
                 None => {},
             }
+
+            self.volume = (player.volume()*100.0).round() as u8;
+            self.song_title = player.current_song_title();
+            self.playing = player.playing();
+
             self.queued_command = None;
             player.update();
-            
+
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
         }
@@ -78,7 +89,7 @@ impl App {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-
+        
         let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
@@ -91,23 +102,15 @@ impl Widget for &App {
         // NOW PLAYING ELEMENT
 
         let np_title = Line::from(" gigr - Now playing: ".bold());
-        let instructions = Line::from(vec![
-            " Prev ".into(),
-            "<h>".blue().bold(),
-            " Next ".into(),
-            "<l>".blue().bold(),
-            " Play / Pause ".into(),
-            "<Space> ".blue().bold(),
-        ]);
         let np_block = Block::bordered()
             .title(np_title.left_aligned())
             //.title_bottom(instructions.centered())
             .border_set(border::THICK);
 
         let np_counter_text = Text::from(vec![Line::from(vec![
-            "Song name: ".into(),
-            //self.counter.to_string().yellow(),
+            Span::raw(format!("   {}", self.song_title)),
         ])]);
+
 
         Paragraph::new(np_counter_text)
             .left_aligned()
@@ -137,16 +140,34 @@ impl Widget for &App {
         // CONTROLS ELEMENT
     
         let ctrl_title = Line::from(" Controls: ".bold());
+        let instructions = Line::from(vec![
+            " Prev ".into(),
+            "<h>".blue().bold(),
+            " Vol - ".into(),
+            "<j>".blue().bold(),
+            " Vol + ".into(),
+            "<k>".blue().bold(),
+            " Next ".into(),
+            "<l>".blue().bold(),
+            " Play / Pause ".into(),
+            "<Space> ".blue().bold(),
+        ]);
 
         let ctrl_block = Block::bordered()
             .title(ctrl_title.left_aligned())
-            //.title_bottom(instructions.centered())
+            .title_bottom(instructions.centered())
             .border_set(border::THICK);
 
         let ctrl_counter_text = Text::from(vec![Line::from(vec![
-            "Playing".bold(),
+        //Spans::from(Span::raw(format!("  Volume: {}%", volume))),
+        Span::raw(format!("  {} - Volume: {}%",
+            match self.playing {
+                true => {"Playing".to_string()}
+                false => {"Paused ".to_string()}
+            }, self.volume))
+        ])]
             //self.counter.to_string().yellow(),
-        ])]);
+        );
         
         Paragraph::new(ctrl_counter_text)
             .centered()
