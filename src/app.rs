@@ -4,7 +4,7 @@ use color_eyre::Result;
 
 use ratatui::{DefaultTerminal, Frame, style::Stylize, symbols::border};
 use ratatui::widgets::{Widget, Block, Paragraph};
-use ratatui::prelude::{Rect, Buffer, Line, Text};
+use ratatui::prelude::{Rect, Buffer, Line, Text, Layout, Direction, Constraint};
 
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
@@ -78,7 +78,19 @@ impl App {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let title = Line::from(" gigr ".bold());
+
+        let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![
+            Constraint::Length(3),
+            Constraint::Min(0),
+            Constraint::Length(3),
+        ])
+        .split(area);
+
+        // NOW PLAYING ELEMENT
+
+        let np_title = Line::from(" gigr - Now playing: ".bold());
         let instructions = Line::from(vec![
             " Prev ".into(),
             "<h>".blue().bold(),
@@ -87,19 +99,60 @@ impl Widget for &App {
             " Play / Pause ".into(),
             "<Space> ".blue().bold(),
         ]);
-        let block = Block::bordered()
-            .title(title.centered())
-            .title_bottom(instructions.centered())
+        let np_block = Block::bordered()
+            .title(np_title.left_aligned())
+            //.title_bottom(instructions.centered())
             .border_set(border::THICK);
 
-        let counter_text = Text::from(vec![Line::from(vec![
-            "Value: ".into(),
+        let np_counter_text = Text::from(vec![Line::from(vec![
+            "Song name: ".into(),
             //self.counter.to_string().yellow(),
         ])]);
 
-        Paragraph::new(counter_text)
+        Paragraph::new(np_counter_text)
+            .left_aligned()
+            .block(np_block)
+            .render(layout[0], buf);
+    
+        // TRACKS ELEMENT
+        
+        let trck_title = Line::from(" Upcoming tracks: ".bold());
+
+        let trck_block = Block::bordered()
+            .title(trck_title.left_aligned())
+            //.title_bottom(instructions.centered())
+            .border_set(border::THICK);
+
+        let trck_counter_text = Text::from(vec![Line::from(vec![
+            "    -".into(),
+            //self.counter.to_string().yellow(),
+        ])]);
+        
+        Paragraph::new(trck_counter_text)
+            .left_aligned()
+            .block(trck_block)
+            .render(layout[1], buf);
+        
+
+        // CONTROLS ELEMENT
+    
+        let ctrl_title = Line::from(" Controls: ".bold());
+
+        let ctrl_block = Block::bordered()
+            .title(ctrl_title.left_aligned())
+            //.title_bottom(instructions.centered())
+            .border_set(border::THICK);
+
+        let ctrl_counter_text = Text::from(vec![Line::from(vec![
+            "Playing".bold(),
+            //self.counter.to_string().yellow(),
+        ])]);
+        
+        Paragraph::new(ctrl_counter_text)
             .centered()
-            .block(block)
-            .render(area, buf);
+            .block(ctrl_block)
+            .render(layout[2], buf);
+        
+
     }
 }
