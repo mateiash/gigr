@@ -72,11 +72,19 @@ impl Player {
         self.sink.append(source);
     }
 
-    pub fn current_song_title(&self) -> String {
+    pub fn get_metadata(&self, metadata_type : MetadataType) -> String {
         match self.idle_state {
             false => {
                 match &self.current_song {
-                    Some(curr_song) => {return curr_song.title_clone();},
+                    Some(curr_song) => {
+                        match metadata_type {
+                            MetadataType::Album => return curr_song.album_clone(),
+                            MetadataType::Title => return curr_song.title_clone(),
+                            MetadataType::TrackArtist => return curr_song.artist_clone(),
+                        }
+                        
+                    
+                    },
                     None => {return "Nothing".to_string();},
                 }
                 
@@ -154,4 +162,10 @@ pub enum PlayerCommand {
     PlayPause,
     VolumeUp,
     VolumeDown,
+}
+
+pub enum MetadataType {
+    Title,
+    TrackArtist,
+    Album,
 }

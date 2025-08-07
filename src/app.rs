@@ -16,7 +16,7 @@ use image::imageops::FilterType;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent};
 
-use crate::player::{Player, PlayerCommand};
+use crate::player::{MetadataType, Player, PlayerCommand};
 
 enum DisplayMode {
     Queue,
@@ -129,7 +129,9 @@ impl<'a> Widget for &mut App<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         
         let volume : u8 = (self.player.volume()*100.0).round() as u8;
-        let song_title: String = self.player.current_song_title();
+        let song_title: String = self.player.get_metadata(MetadataType::Title);
+        let song_album: String = self.player.get_metadata(MetadataType::Album);
+        let song_artist: String = self.player.get_metadata(MetadataType::TrackArtist);
         let playing : bool = self.player.playing();
         let queue_len : usize = self.player.queue().len();
 
@@ -223,6 +225,27 @@ impl<'a> Widget for &mut App<'a> {
                         Span::raw(format!("Title: {}", song_title))
                     ]);
                 track_info_lines.push(name_span);
+
+                let blank_line = Line::from(vec![
+                        Span::raw(" ")
+                    ]);
+                track_info_lines.push(blank_line);
+
+                let artist_span = Line::from(vec![
+                        Span::raw(format!("Artist: {}", song_artist))
+                    ]);
+                track_info_lines.push(artist_span);
+
+                let blank_line = Line::from(vec![
+                        Span::raw(" ")
+                    ]);
+                track_info_lines.push(blank_line);
+
+                let album_span = Line::from(vec![
+                        Span::raw(format!("Album: {}", song_album))
+                    ]);
+                track_info_lines.push(album_span);
+
 
                 // END OF LINES IN TRACK INFO
 
