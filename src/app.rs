@@ -1,6 +1,5 @@
 use std::io;
 use std::error::Error;
-use std::iter::Filter;
 
 use color_eyre::Result;
 
@@ -8,20 +7,16 @@ use ratatui::{DefaultTerminal, Frame, style::Stylize, symbols::border};
 use ratatui::widgets::{Widget, Block, Paragraph};
 use ratatui::prelude::{Rect, Buffer, Line, Text, Layout, Direction, Constraint, StatefulWidget};
 use ratatui::text::{Span};
-use ratatui::style::{Style, Modifier};
 
-use ratatui_image::ResizeEncodeRender;
 use ratatui_image::{picker::Picker, StatefulImage, protocol::StatefulProtocol};
 
 use image;
-use image::{DynamicImage};
 use image::imageops::FilterType;
 
 use crossterm::event;
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEvent};
 
 use crate::player::{Player, PlayerCommand};
-use crate::song;
 
 enum DisplayMode {
     Queue,
@@ -113,7 +108,7 @@ impl<'a> App<'a> {
     }
 
     fn load_album_cover() -> Result<StatefulProtocol, Box<dyn Error>> {
-        let mut picker = Picker::from_query_stdio()?;
+        let picker = Picker::from_query_stdio()?;
 
         // Load an image with the image crate.
         let dyn_img = image::ImageReader::open("/home/david/Documents/Projects/gigr/target/examples/cover.jpg")?.decode()?.resize(600, 600, FilterType::Gaussian);

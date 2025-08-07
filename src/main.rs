@@ -1,14 +1,10 @@
 use std::env;
 
-use std::io;
-
 use std::path::PathBuf;
 
 use std::fs::read_dir;
 
 use color_eyre::Result;
-use crossterm::event::{self, Event};
-use ratatui::{DefaultTerminal, Frame};
 
 // Modules
 mod song;
