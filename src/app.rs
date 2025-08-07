@@ -17,6 +17,7 @@ use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent};
 
 use crate::player::{MetadataType, Player, PlayerCommand};
+use crate::expand_tilde;
 
 enum DisplayMode {
     Queue,
@@ -111,7 +112,7 @@ impl<'a> App<'a> {
         let picker = Picker::from_query_stdio()?;
 
         // Load an image with the image crate.
-        let dyn_img = image::ImageReader::open("/home/david/Documents/Projects/gigr/target/examples/cover.jpg")?.decode()?.resize(600, 600, FilterType::Gaussian);
+        let dyn_img = image::ImageReader::open(expand_tilde("~/Music/cover.jpg"))?.decode()?.resize(600, 600, FilterType::Gaussian);
 
         // Create the Protocol which will be used by the widget.
         let image = picker.new_resize_protocol(dyn_img);
@@ -148,9 +149,17 @@ impl<'a> Widget for &mut App<'a> {
         // NOW PLAYING ELEMENT
 
         let np_title = Line::from(" gigr - Now playing: ".bold());
+
+        let mode_instructions = Line::from(vec![
+            " Queue View ".into(),
+            "<o>".blue().bold(),
+            " Now Playing View ".into(),
+            "<p> ".blue().bold(),
+        ]);
+
         let np_block = Block::bordered()
             .title(np_title.left_aligned())
-            //.title_bottom(instructions.centered())
+            .title_bottom(mode_instructions.centered())
             .border_set(border::THICK);
 
         let np_counter_text = Text::from(vec![Line::from(vec![
@@ -165,7 +174,7 @@ impl<'a> Widget for &mut App<'a> {
     
         match self.display_mode {
             DisplayMode::Queue => {
-                let trck_title = Line::from(" Upcoming tracks: ".bold());
+                let trck_title = Line::from(" Next up: ".bold());
 
                 let mut track_lines: Vec<Line<'_>> = Vec::new();
 
@@ -193,8 +202,8 @@ impl<'a> Widget for &mut App<'a> {
                 let current_layout = Layout::default()
                     .direction(Direction::Horizontal)
                     .constraints(vec![
-                        Constraint::Percentage(50),
-                        Constraint::Percentage(50),
+                        Constraint::Percentage(55),
+                        Constraint::Percentage(45),
                     ])
                     .split(layout[1]);
 
@@ -205,13 +214,12 @@ impl<'a> Widget for &mut App<'a> {
                 let image = StatefulImage::<StatefulProtocol>::default();
 
                 let album_art_block = Block::bordered()
-                    .title(curr_trck_dis_title.left_aligned())
                     .title_bottom(album_art_title.centered())
                     .border_set(border::THICK);
 
-                let album_art_inner_area = album_art_block.inner(current_layout[0]);
+                let album_art_inner_area = album_art_block.inner(current_layout[1]);
 
-                album_art_block.render(current_layout[0], buf);
+                album_art_block.render(current_layout[1], buf);
 
                 image.render(album_art_inner_area, buf, &mut self.album_art);
 
@@ -250,14 +258,14 @@ impl<'a> Widget for &mut App<'a> {
                 // END OF LINES IN TRACK INFO
 
                 let track_info_block = Block::bordered()
-                    //.title(trck_title.left_aligned())
+                    .title(curr_trck_dis_title.left_aligned())
                     .title_bottom(track_info_title.centered())
                     .border_set(border::THICK);
 
                 Paragraph::new(track_info_lines)
                     .centered()
                     .block(track_info_block)
-                    .render(current_layout[1], buf);
+                    .render(current_layout[0], buf);
 
                 
         
