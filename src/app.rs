@@ -13,9 +13,16 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 
 use crate::player::{Player, PlayerCommand};
 
+enum DisplayMode {
+    Queue,
+    CurrentTrack,
+}
+
 pub struct App<'a> {
     exit: bool,
     queued_command : Option<PlayerCommand>,
+
+    display_mode : DisplayMode,
 
     player : &'a mut Player,
 }
@@ -25,6 +32,8 @@ impl<'a> App<'a> {
         Self {
             exit : false,
             queued_command : None,
+
+            display_mode : DisplayMode::Queue,
 
             player : player,
         }
@@ -72,12 +81,17 @@ impl<'a> App<'a> {
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
+            // PLAYER EVENTS
             KeyCode::Char('q') => self.exit(),
             KeyCode::Char('h') => self.queued_command = Some(PlayerCommand::Prev),
             KeyCode::Char('j') => self.queued_command = Some(PlayerCommand::VolumeDown),
             KeyCode::Char('k') => self.queued_command = Some(PlayerCommand::VolumeUp),
             KeyCode::Char('l') => self.queued_command = Some(PlayerCommand::Skip),
             KeyCode::Char(' ') => self.queued_command = Some(PlayerCommand::PlayPause),
+
+            // UI
+            KeyCode::Char('p') => self.display_mode = DisplayMode::CurrentTrack,
+            KeyCode::Char('o') => self.display_mode = DisplayMode::Queue,
             _ => { self.queued_command = None},
         }
     }
@@ -124,36 +138,57 @@ impl<'a> Widget for &App<'a> {
             .block(np_block)
             .render(layout[0], buf);
     
-        // TRACKS ELEMENT
-        
-        let trck_title = Line::from(" Upcoming tracks: ".bold());
+        match self.display_mode {
+            DisplayMode::Queue => {
+                let trck_title = Line::from(" Upcoming tracks: ".bold());
 
-        let mut track_lines = Vec::new();
+                let mut track_lines = Vec::new();
 
 
-        for n in self.player.player_index..queue_len {
-            let song = self.player.queue().get(n).unwrap();
-            let span = Line::from(vec![
-                Span::raw(format!("  {}", song.title_clone()))
-            ]);
-            track_lines.push(span);
+                for n in self.player.player_index..queue_len {
+                    let song = self.player.queue().get(n).unwrap();
+                    let span = Line::from(vec![
+                        Span::raw(format!("  {}", song.title_clone()))
+                    ]);
+                    track_lines.push(span);
+                }
+
+                let trck_block = Block::bordered()
+                    .title(trck_title.left_aligned())
+                    //.title_bottom(instructions.centered())
+                    .border_set(border::THICK);
+                
+                Paragraph::new(track_lines)
+                    .left_aligned()
+                    .block(trck_block)
+                    .render(layout[1], buf);
+                    },
+            
+            DisplayMode::CurrentTrack => {
+                let trck_title = Line::from(" Current track: ".bold());
+
+                let mut track_lines = Vec::new();
+
+                for n in self.player.player_index..queue_len {
+                    let song = self.player.queue().get(n).unwrap();
+                    let span = Line::from(vec![
+                        Span::raw(format!("  {}", song.title_clone()))
+                    ]);
+                    track_lines.push(span);
+                }
+
+                let trck_block = Block::bordered()
+                    .title(trck_title.left_aligned())
+                    //.title_bottom(instructions.centered())
+                    .border_set(border::THICK);
+                
+                Paragraph::new(track_lines)
+                    .left_aligned()
+                    .block(trck_block)
+                    .render(layout[1], buf);
+            },
+            
         }
-
-        let trck_block = Block::bordered()
-            .title(trck_title.left_aligned())
-            //.title_bottom(instructions.centered())
-            .border_set(border::THICK);
-
-        let trck_counter_text = Text::from(vec![Line::from(vec![
-            "    -".into(),
-            //self.counter.to_string().yellow(),
-        ])]);
-        
-        Paragraph::new(track_lines)
-            .left_aligned()
-            .block(trck_block)
-            .render(layout[1], buf);
-        
 
         // CONTROLS ELEMENT
     
