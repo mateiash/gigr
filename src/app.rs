@@ -94,6 +94,8 @@ impl<'a> Widget for &App<'a> {
         let volume : u8 = (self.player.volume()*100.0).round() as u8;
         let song_title: String = self.player.current_song_title();
         let playing : bool = self.player.playing();
+        let queue_len : usize = self.player.queue().len();
+
 
         let layout = Layout::default()
         .direction(Direction::Vertical)
@@ -126,6 +128,17 @@ impl<'a> Widget for &App<'a> {
         
         let trck_title = Line::from(" Upcoming tracks: ".bold());
 
+        let mut track_lines = Vec::new();
+
+
+        for n in self.player.player_index..queue_len {
+            let song = self.player.queue().get(n).unwrap();
+            let span = Line::from(vec![
+                Span::raw(format!("  {}", song.title_clone()))
+            ]);
+            track_lines.push(span);
+        }
+
         let trck_block = Block::bordered()
             .title(trck_title.left_aligned())
             //.title_bottom(instructions.centered())
@@ -136,7 +149,7 @@ impl<'a> Widget for &App<'a> {
             //self.counter.to_string().yellow(),
         ])]);
         
-        Paragraph::new(trck_counter_text)
+        Paragraph::new(track_lines)
             .left_aligned()
             .block(trck_block)
             .render(layout[1], buf);
