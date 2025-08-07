@@ -1,5 +1,6 @@
 use std::io;
 use std::error::Error;
+use std::iter::Filter;
 
 use color_eyre::Result;
 
@@ -14,11 +15,13 @@ use ratatui_image::{picker::Picker, StatefulImage, protocol::StatefulProtocol};
 
 use image;
 use image::{DynamicImage};
+use image::imageops::FilterType;
 
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 
 use crate::player::{Player, PlayerCommand};
+use crate::song;
 
 enum DisplayMode {
     Queue,
@@ -113,7 +116,7 @@ impl<'a> App<'a> {
         let mut picker = Picker::from_query_stdio()?;
 
         // Load an image with the image crate.
-        let dyn_img = image::ImageReader::open("/home/david/Documents/Projects/gigr/target/examples/cover.jpg")?.decode()?;
+        let dyn_img = image::ImageReader::open("/home/david/Documents/Projects/gigr/target/examples/cover.jpg")?.decode()?.resize(600, 600, FilterType::Gaussian);
 
         // Create the Protocol which will be used by the widget.
         let image = picker.new_resize_protocol(dyn_img);
@@ -167,7 +170,7 @@ impl<'a> Widget for &mut App<'a> {
             DisplayMode::Queue => {
                 let trck_title = Line::from(" Upcoming tracks: ".bold());
 
-                let mut track_lines = Vec::new();
+                let mut track_lines: Vec<Line<'_>> = Vec::new();
 
 
                 for n in self.player.player_index..queue_len {
@@ -198,13 +201,15 @@ impl<'a> Widget for &mut App<'a> {
                     ])
                     .split(layout[1]);
 
-                let trck_title = Line::from(" Current track: ".bold());
+                let curr_trck_dis_title = Line::from(" Current track: ".bold());
+
+                let album_art_title = Line::from(" Cover art ");
 
                 let image = StatefulImage::<StatefulProtocol>::default();
 
                 let album_art_block = Block::bordered()
-                    .title(trck_title.left_aligned())
-                    //.title_bottom(instructions.centered())
+                    .title(curr_trck_dis_title.left_aligned())
+                    .title_bottom(album_art_title.centered())
                     .border_set(border::THICK);
 
                 let album_art_inner_area = album_art_block.inner(current_layout[0]);
@@ -213,36 +218,31 @@ impl<'a> Widget for &mut App<'a> {
 
                 image.render(album_art_inner_area, buf, &mut self.album_art);
 
+                let track_info_title = Line::from(" Track info ");
+
+                let mut track_info_lines: Vec<Line<'_>> = Vec::new();
+                
+                // LINES IN TRACK INFO
+
+                let name_span = Line::from(vec![
+                        Span::raw(format!("Title: {}", song_title))
+                    ]);
+                track_info_lines.push(name_span);
+
+                // END OF LINES IN TRACK INFO
+
                 let track_info_block = Block::bordered()
                     //.title(trck_title.left_aligned())
-                    //.title_bottom(instructions.centered())
+                    .title_bottom(track_info_title.centered())
                     .border_set(border::THICK);
 
-                let track_info_inner_area = track_info_block.inner(current_layout[1]);
+                Paragraph::new(track_info_lines)
+                    .centered()
+                    .block(track_info_block)
+                    .render(current_layout[1], buf);
 
-                track_info_block.render(current_layout[1], buf);
                 
-                /* 
-                let mut track_lines = Vec::new();
-
-                for n in self.player.player_index..queue_len {
-                    let song = self.player.queue().get(n).unwrap();
-                    let span = Line::from(vec![
-                        Span::raw(format!("  {}", song.title_clone()))
-                    ]);
-                    track_lines.push(span);
-                }
-
-                let trck_block = Block::bordered()
-                    .title(trck_title.left_aligned())
-                    //.title_bottom(instructions.centered())
-                    .border_set(border::THICK);
-                
-                Paragraph::new(track_lines)
-                    .left_aligned()
-                    .block(trck_block)
-                    .render(layout[1], buf);
-                */
+        
             },
             
         }
