@@ -34,7 +34,7 @@ impl App {
                 },
                 None => {},
             }
-
+            self.queued_command = None;
             player.update();
             
             terminal.draw(|frame| self.draw(frame))?;
@@ -48,14 +48,13 @@ impl App {
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
-        match event::read()? {
-            // it's important to check that the event is a key press event as
-            // crossterm also emits key release and repeat events on Windows.
-            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self.handle_key_event(key_event)
+
+        if crossterm::event::poll(std::time::Duration::from_millis(200))? {
+            if let Event::Key(key) = event::read()? {
+                self.handle_key_event(key);
             }
-            _ => {}
-        };
+        }
+        
         Ok(())
     }
 
