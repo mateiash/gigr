@@ -190,12 +190,39 @@ impl<'a> Widget for &mut App<'a> {
                     },
             
             DisplayMode::CurrentTrack => {
+                let current_layout = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints(vec![
+                        Constraint::Percentage(50),
+                        Constraint::Percentage(50),
+                    ])
+                    .split(layout[1]);
+
                 let trck_title = Line::from(" Current track: ".bold());
 
                 let image = StatefulImage::<StatefulProtocol>::default();
 
-                image.render(layout[1], buf, &mut self.album_art);
+                let album_art_block = Block::bordered()
+                    .title(trck_title.left_aligned())
+                    //.title_bottom(instructions.centered())
+                    .border_set(border::THICK);
 
+                let album_art_inner_area = album_art_block.inner(current_layout[0]);
+
+                album_art_block.render(current_layout[0], buf);
+
+                image.render(album_art_inner_area, buf, &mut self.album_art);
+
+                let track_info_block = Block::bordered()
+                    //.title(trck_title.left_aligned())
+                    //.title_bottom(instructions.centered())
+                    .border_set(border::THICK);
+
+                let track_info_inner_area = track_info_block.inner(current_layout[1]);
+
+                track_info_block.render(current_layout[1], buf);
+                
+                /* 
                 let mut track_lines = Vec::new();
 
                 for n in self.player.player_index..queue_len {
@@ -215,6 +242,7 @@ impl<'a> Widget for &mut App<'a> {
                     .left_aligned()
                     .block(trck_block)
                     .render(layout[1], buf);
+                */
             },
             
         }
