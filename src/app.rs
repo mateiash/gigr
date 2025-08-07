@@ -1,12 +1,19 @@
 use std::io;
+use std::error::Error;
 
 use color_eyre::Result;
 
 use ratatui::{DefaultTerminal, Frame, style::Stylize, symbols::border};
 use ratatui::widgets::{Widget, Block, Paragraph};
-use ratatui::prelude::{Rect, Buffer, Line, Text, Layout, Direction, Constraint};
+use ratatui::prelude::{Rect, Buffer, Line, Text, Layout, Direction, Constraint, StatefulWidget};
 use ratatui::text::{Span};
 use ratatui::style::{Style, Modifier};
+
+use ratatui_image::ResizeEncodeRender;
+use ratatui_image::{picker::Picker, StatefulImage, protocol::StatefulProtocol};
+
+use image;
+use image::{DynamicImage};
 
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
@@ -25,10 +32,14 @@ pub struct App<'a> {
     display_mode : DisplayMode,
 
     player : &'a mut Player,
+
+    album_art : StatefulProtocol,
 }
 
 impl<'a> App<'a> {
     pub fn new(player : &'a mut Player) -> Self {
+        let album_art_image = App::load_album_cover().unwrap();
+
         Self {
             exit : false,
             queued_command : None,
@@ -36,6 +47,8 @@ impl<'a> App<'a> {
             display_mode : DisplayMode::Queue,
 
             player : player,
+
+            album_art : album_art_image,
         }
     }
 
@@ -64,7 +77,7 @@ impl<'a> App<'a> {
         Ok(())
     }
 
-    fn draw(&self, frame: &mut Frame) {
+    fn draw(&mut self, frame: &mut Frame) {
         frame.render_widget(self, frame.area());
     }
 
@@ -96,13 +109,25 @@ impl<'a> App<'a> {
         }
     }
 
+    fn load_album_cover() -> Result<StatefulProtocol, Box<dyn Error>> {
+        let mut picker = Picker::from_query_stdio()?;
+
+        // Load an image with the image crate.
+        let dyn_img = image::ImageReader::open("/home/david/Documents/Projects/gigr/target/examples/cover.jpg")?.decode()?;
+
+        // Create the Protocol which will be used by the widget.
+        let image = picker.new_resize_protocol(dyn_img);
+
+        Ok(image)
+    }
+
     fn exit(&mut self) {
         self.exit = true;
     }
     
 }
 
-impl<'a> Widget for &App<'a> {
+impl<'a> Widget for &mut App<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         
         let volume : u8 = (self.player.volume()*100.0).round() as u8;
@@ -166,6 +191,10 @@ impl<'a> Widget for &App<'a> {
             
             DisplayMode::CurrentTrack => {
                 let trck_title = Line::from(" Current track: ".bold());
+
+                let image = StatefulImage::<StatefulProtocol>::default();
+
+                image.render(layout[1], buf, &mut self.album_art);
 
                 let mut track_lines = Vec::new();
 
