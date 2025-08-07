@@ -56,7 +56,7 @@ fn main() -> Result<()> {
     // EVERYTHING UI
     
     let mut terminal = ratatui::init();
-    let app_result = App::default().run(&mut terminal, &mut player);
+    let app_result = App::new(&mut player).run(&mut terminal);
     ratatui::restore();
     app_result
 

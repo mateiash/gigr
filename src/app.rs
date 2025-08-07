@@ -13,40 +13,41 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 
 use crate::player::{Player, PlayerCommand};
 
-#[derive(Debug, Default)]
-pub struct App {
+pub struct App<'a> {
     exit: bool,
     queued_command : Option<PlayerCommand>,
 
-    volume : u8,
-    song_title : String,
-    playing : bool,
+    player : &'a mut Player,
 }
 
-impl App {
+impl<'a> App<'a> {
+    pub fn new(player : &'a mut Player) -> Self {
+        Self {
+            exit : false,
+            queued_command : None,
+
+            player : player,
+        }
+    }
 
     /// runs the application's main loop until the user quits
-    pub fn run(&mut self, terminal: &mut DefaultTerminal, player : &mut Player) -> Result<()> {
+    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
         while !self.exit {
             match &self.queued_command {
                 Some(command) => {
                     match command {
-                        PlayerCommand::Prev => {player.return_last_song();},
-                        PlayerCommand::Skip => {player.skip_current_song();},
-                        PlayerCommand::VolumeUp => {player.change_volume(0.05);},
-                        PlayerCommand::VolumeDown => {player.change_volume(-0.05);},
-                        PlayerCommand::PlayPause => {player.play_pause();},
+                        PlayerCommand::Prev => {self.player.return_last_song();},
+                        PlayerCommand::Skip => {self.player.skip_current_song();},
+                        PlayerCommand::VolumeUp => {self.player.change_volume(0.05);},
+                        PlayerCommand::VolumeDown => {self.player.change_volume(-0.05);},
+                        PlayerCommand::PlayPause => {self.player.play_pause();},
                     }
                 },
                 None => {},
             }
 
-            self.volume = (player.volume()*100.0).round() as u8;
-            self.song_title = player.current_song_title();
-            self.playing = player.playing();
-
             self.queued_command = None;
-            player.update();
+            self.player.update();
 
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
@@ -87,9 +88,13 @@ impl App {
     
 }
 
-impl Widget for &App {
+impl<'a> Widget for &App<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         
+        let volume : u8 = (self.player.volume()*100.0).round() as u8;
+        let song_title: String = self.player.current_song_title();
+        let playing : bool = self.player.playing();
+
         let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
@@ -108,7 +113,7 @@ impl Widget for &App {
             .border_set(border::THICK);
 
         let np_counter_text = Text::from(vec![Line::from(vec![
-            Span::raw(format!("   {}", self.song_title)),
+            Span::raw(format!("   {}", song_title)),
         ])]);
 
 
@@ -161,10 +166,10 @@ impl Widget for &App {
         let ctrl_counter_text = Text::from(vec![Line::from(vec![
         //Spans::from(Span::raw(format!("  Volume: {}%", volume))),
         Span::raw(format!("  {} - Volume: {}%",
-            match self.playing {
+            match playing {
                 true => {"Playing".to_string()}
                 false => {"Paused ".to_string()}
-            }, self.volume))
+            }, volume))
         ])]
             //self.counter.to_string().yellow(),
         );
