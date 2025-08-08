@@ -2,8 +2,10 @@ use std::io;
 use std::error::Error;
 use std::fs::{read_dir, File};
 
+use color_eyre::owo_colors::OwoColorize;
 use color_eyre::Result;
 
+use ratatui::style::Modifier;
 use ratatui::{DefaultTerminal, Frame, style::Stylize, symbols::border};
 use ratatui::widgets::{Widget, Block, Paragraph};
 use ratatui::prelude::{Rect, Buffer, Line, Text, Layout, Direction, Constraint, StatefulWidget};
@@ -22,6 +24,7 @@ use crate::player::{MetadataType, Player, PlayerCommand};
 use crate::expand_tilde;
 use crate::song::Song;
 
+#[derive(PartialEq)]
 enum DisplayMode {
     Queue,
     CurrentTrack,
@@ -133,10 +136,25 @@ impl App {
             KeyCode::Char(' ') => self.queued_command = Some(PlayerCommand::PlayPause),
 
             // UI
+            // DISPLAY MODE SELECTION
+
             KeyCode::Char('p') => self.display_mode = DisplayMode::CurrentTrack,
             KeyCode::Char('o') => self.display_mode = DisplayMode::Queue,
             KeyCode::Char('i') => self.display_mode = DisplayMode::FileSelection,
+
             _ => { self.queued_command = None},
+        }
+
+        // FILE SELECTION
+        if self.display_mode == DisplayMode::FileSelection {
+            match key_event.code {
+                KeyCode::Char('s') => self.file_selector.move_down(),
+                KeyCode::Char('d') => self.file_selector.move_up(),
+                KeyCode::Char('f') => self.file_selector.act_selection(),
+                KeyCode::Char('a') => self.file_selector.move_back(),
+
+                _ => {},
+            }
         }
     }
 
@@ -144,7 +162,7 @@ impl App {
         let picker = Picker::from_query_stdio().unwrap();
 
         // Load an image with the image crate.
-        let dyn_img = image::ImageReader::open(expand_tilde("~/Music/cover.jpg"));//?.decode()?.resize(1800, 1800, FilterType::Gaussian);
+        let dyn_img = image::ImageReader::open(expand_tilde("~/Music/cover.jpg"));
 
         match dyn_img {
             Ok(img) => {
@@ -153,9 +171,6 @@ impl App {
             }
             _ => return None,
         }
-        // Create the Protocol which will be used by the widget.
-        
-
         
     }
 
@@ -335,24 +350,28 @@ impl<'a> Widget for &mut App {
 
                 let mut fs_lines: Vec<Line<'_>> = Vec::new();
 
+                let selected_entry = self.file_selector.selected_entry();
+                let file_entries = self.file_selector.contents();
 
-                for entry in self.file_selector.contents() {
+                for n in 0..file_entries.len() {
+                    let entry = file_entries.get(n).unwrap();
                     let path = entry.path();
+                    let name = path.as_path().to_str().unwrap();
+                    let mut span = 
+                                Span::raw(format!("  {}", name));
 
-                    if path.is_file() {
-                            let name = path.as_path().to_str().unwrap();
-                            let span = Line::from(vec![
-                                Span::raw(format!("  {}", name))
-                            ]);
-                            fs_lines.push(span);
-                    } 
                     if path.is_dir() {
-                            let name = path.as_path().to_str().unwrap();
-                            let span = Line::from(vec![
-                                Span::raw(format!("  {}", name)).bold()
-                            ]);
-                            fs_lines.push(span);
+                        span = span.add_modifier(Modifier::BOLD);
                     } 
+
+                    if n == selected_entry {
+                        span = span.blue();
+                    }
+
+                    let line = Line::from(vec![
+                            span
+                    ]);
+                    fs_lines.push(line);
                 }
 
 
