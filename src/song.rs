@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use lofty::prelude::{ItemKey};
 use lofty::probe::{Probe};
 use lofty::file::TaggedFileExt;
@@ -69,5 +71,8 @@ impl Song {
 
     pub fn file_path_clone(&self) -> String{
         return self.file_path.clone();
+    }
+    pub fn file_path_as_path(&self) -> PathBuf{
+        return PathBuf::from(&self.file_path);
     }
 }

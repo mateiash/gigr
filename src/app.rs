@@ -1,6 +1,7 @@
 use std::io;
 use std::error::Error;
 use std::fs::{read_dir, DirEntry, File};
+use std::path::PathBuf;
 
 use color_eyre::owo_colors::OwoColorize;
 use color_eyre::Result;
@@ -47,7 +48,7 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        let album_art_image = App::load_album_cover();
+        let album_art_image = App::load_album_cover(expand_tilde("~/Music/cover.jpg"));
 
         Self {
             exit : false,
@@ -100,7 +101,17 @@ impl App {
             }
 
             self.queued_command = None;
-            self.player.update();
+            let update : bool = self.player.update();
+
+
+            if update {
+                let mut img_path = self.player.current_song().unwrap().file_path_as_path();
+                img_path.pop();
+                img_path.push("cover.jpg");
+                self.album_art = App::load_album_cover(
+                    img_path
+                );
+            }
 
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
@@ -157,11 +168,11 @@ impl App {
         }
     }
 
-    fn load_album_cover() -> Option<StatefulProtocol> {
+    fn load_album_cover(path : PathBuf) -> Option<StatefulProtocol> {
         let picker = Picker::from_query_stdio().unwrap();
 
         // Load an image with the image crate.
-        let dyn_img = image::ImageReader::open(expand_tilde("~/Music/cover.jpg"));
+        let dyn_img = image::ImageReader::open(path);
 
         match dyn_img {
             Ok(img) => {
@@ -341,10 +352,16 @@ impl<'a> Widget for &mut App {
                 let fs_title = Line::from(" File Selection: ");
 
                 let fs_instructions = Line::from(vec![
-                    " Queue View ".into(),
-                    "<o>".blue().bold(),
-                    " Now Playing View ".into(),
-                    "<p> ".blue().bold(),
+                    " Back ".into(),
+                    "<a>".blue().bold(),
+                    " Down ".into(),
+                    "<s>".blue().bold(),
+                    " Up ".into(),
+                    "<d>".blue().bold(),
+                    " Into ".into(),
+                    "<f>".blue().bold(),
+                    " Load ".into(),
+                    "<Enter> ".blue().bold(),
                 ]);
 
                 let mut fs_lines: Vec<Line<'_>> = Vec::new();
@@ -379,8 +396,13 @@ impl<'a> Widget for &mut App {
                     .title_bottom(fs_instructions.centered())
                     .border_set(border::THICK);
 
+                let scroll : isize = self.file_selector.selected_entry() as isize - 1;
+                
                 Paragraph::new(fs_lines)
                     .left_aligned()
+                    .scroll((
+                        (scroll*(scroll.is_positive() as isize)).try_into().unwrap()
+                        , 0))
                     .block(fs_block)
                     .render(layout[1], buf);
             },

@@ -43,9 +43,9 @@ impl Player {
         self.queue.push(song);
     }
 
-    pub fn update(&mut self) -> () {
+    pub fn update(&mut self) -> bool {
         if !self.sink.empty() {
-            return;
+            return false;
         }
 
         self.player_index += 1;
@@ -53,7 +53,7 @@ impl Player {
         if self.player_index > self.queue.len() {
             //self.player_index = 0;
             self.player_index -= 1;
-            return;
+            return false;
         } 
 
         let song_ref = self.queue.get(self.player_index - 1).unwrap();
@@ -64,6 +64,7 @@ impl Player {
         let buffered = BufReader::new(file);
         let source: Decoder<BufReader<File>> = Decoder::try_from(buffered).unwrap();
         self.sink.append(source);
+        return true;
     }
 
     pub fn get_metadata(&self, metadata_type : MetadataType) -> String {
@@ -154,6 +155,13 @@ impl Player {
 
     pub fn queue(&self) -> &Vec<Song> {
         return &self.queue;
+    }
+
+    pub fn current_song(&self) -> Option<&Song> {
+        match &self.current_song{
+            Some(song) => return Some(song),
+            None => return None,
+        }
     }
 
 }
