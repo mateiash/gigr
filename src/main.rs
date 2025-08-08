@@ -10,6 +10,7 @@ use color_eyre::Result;
 mod song;
 mod player;
 mod app;
+mod files;
 
 use crate::song::Song;
 use crate::player::Player;
@@ -20,7 +21,7 @@ fn main() -> Result<()> {
 
     color_eyre::install()?;
     // ADDING SONGS
-
+    /*
     let mut player = Player::new();
 
     let path = expand_tilde("~/Music");
@@ -48,11 +49,11 @@ fn main() -> Result<()> {
             } 
         }
     }
-
+     */
     // EVERYTHING UI
     
     let mut terminal = ratatui::init();
-    let app_result = App::new(&mut player).run(&mut terminal);
+    let app_result = App::new().run(&mut terminal);
     ratatui::restore();
     app_result
 

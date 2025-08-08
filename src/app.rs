@@ -1,5 +1,6 @@
 use std::io;
 use std::error::Error;
+use std::fs::read_dir;
 
 use color_eyre::Result;
 
@@ -18,25 +19,26 @@ use crossterm::event::{Event, KeyCode, KeyEvent};
 
 use crate::player::{MetadataType, Player, PlayerCommand};
 use crate::expand_tilde;
+use crate::song::Song;
 
 enum DisplayMode {
     Queue,
     CurrentTrack,
 }
 
-pub struct App<'a> {
+pub struct App {
     exit: bool,
     queued_command : Option<PlayerCommand>,
 
     display_mode : DisplayMode,
 
-    player : &'a mut Player,
+    player : Player,
 
     album_art : Option<StatefulProtocol>,
 }
 
-impl<'a> App<'a> {
-    pub fn new(player : &'a mut Player) -> Self {
+impl App {
+    pub fn new() -> Self {
         let album_art_image = App::load_album_cover();
 
         Self {
@@ -45,7 +47,7 @@ impl<'a> App<'a> {
 
             display_mode : DisplayMode::Queue,
 
-            player : player,
+            player : Player::new(),
 
             album_art : album_art_image,
         }
@@ -53,6 +55,31 @@ impl<'a> App<'a> {
 
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+        let path = expand_tilde("~/Music");
+
+        if path.is_dir() {
+
+            let mut entries: Vec<_> = read_dir(path)
+                .unwrap()
+                .map(|res| res.unwrap())
+                .collect();
+
+            entries.sort_by_key(|dir| dir.path());
+
+
+            for entry in entries {
+                let path = entry.path();
+
+                if path.is_file() {
+                    if let Some(ext) = path.extension() {
+                        if ext == "mp3" || ext == "flac" || ext == "wav" {
+                            let song = Song::new(&path.to_str().unwrap());
+                            self.player.add_to_queue(song);
+                        }
+                    }
+                } 
+            }
+        }
         while !self.exit {
             match &self.queued_command {
                 Some(command) => {
@@ -133,7 +160,7 @@ impl<'a> App<'a> {
     
 }
 
-impl<'a> Widget for &mut App<'a> {
+impl<'a> Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         
         let volume : u8 = (self.player.volume()*100.0).round() as u8;
