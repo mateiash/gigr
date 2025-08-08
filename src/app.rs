@@ -24,6 +24,7 @@ use crate::song::Song;
 enum DisplayMode {
     Queue,
     CurrentTrack,
+    FileSelection,
 }
 
 pub struct App {
@@ -131,6 +132,7 @@ impl App {
             // UI
             KeyCode::Char('p') => self.display_mode = DisplayMode::CurrentTrack,
             KeyCode::Char('o') => self.display_mode = DisplayMode::Queue,
+            KeyCode::Char('i') => self.display_mode = DisplayMode::FileSelection,
             _ => { self.queued_command = None},
         }
     }
@@ -185,6 +187,8 @@ impl<'a> Widget for &mut App {
         let np_title = Line::from(" gigr - Now playing: ".bold());
 
         let mode_instructions = Line::from(vec![
+            " File Selection ".into(),
+            "<i>".blue().bold(),
             " Queue View ".into(),
             "<o>".blue().bold(),
             " Now Playing View ".into(),
@@ -314,6 +318,39 @@ impl<'a> Widget for &mut App {
 
                 
         
+            },
+
+            DisplayMode::FileSelection => {
+                let fs_title = Line::from(" File Selection: ");
+
+                let fs_instructions = Line::from(vec![
+                    " Queue View ".into(),
+                    "<o>".blue().bold(),
+                    " Now Playing View ".into(),
+                    "<p> ".blue().bold(),
+                ]);
+
+                let mut fs_lines: Vec<Line<'_>> = Vec::new();
+
+
+                for n in self.player.player_index..queue_len {
+                    let song = self.player.queue().get(n).unwrap();
+                    let span = Line::from(vec![
+                        Span::raw(format!("  {}", song.title_clone()))
+                    ]);
+                    fs_lines.push(span);
+                }
+
+
+                let fs_block = Block::bordered()
+                    .title(fs_title.left_aligned())
+                    .title_bottom(fs_instructions.centered())
+                    .border_set(border::THICK);
+
+                Paragraph::new(fs_lines)
+                    .left_aligned()
+                    .block(fs_block)
+                    .render(layout[1], buf);
             },
             
         }

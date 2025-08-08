@@ -103,6 +103,15 @@ impl Player {
         self.sink.skip_one();
     }
 
+    pub fn clear_queue(&mut self) -> () {
+        if self.sink.empty() {
+            return;
+        }
+
+        self.queue.clear();
+        self.player_index = 0;
+    }
+
     pub fn return_last_song(&mut self) -> () {
         if self.sink.empty() {
             return;
