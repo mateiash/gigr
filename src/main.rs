@@ -2,8 +2,6 @@ use std::env;
 
 use std::path::PathBuf;
 
-use std::fs::read_dir;
-
 use color_eyre::Result;
 
 // Modules
@@ -11,9 +9,6 @@ mod song;
 mod player;
 mod app;
 mod files;
-
-use crate::song::Song;
-use crate::player::Player;
 
 use crate::app::{App};
 

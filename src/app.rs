@@ -1,9 +1,7 @@
 use std::io;
-use std::error::Error;
-use std::fs::{read_dir, DirEntry, File};
+use std::fs::DirEntry;
 use std::path::PathBuf;
 
-use color_eyre::owo_colors::OwoColorize;
 use color_eyre::Result;
 
 use ratatui::style::Modifier;
