@@ -108,7 +108,7 @@ impl App {
             if update {
                 let mut img_path = self.player.current_song().unwrap().file_path_as_path();
                 img_path.pop();
-                img_path.push("cover.jpg");
+                img_path.push("Cover.jpg");
                 self.album_art = App::load_album_cover(
                     img_path
                 );
@@ -403,7 +403,7 @@ impl<'a> Widget for &mut App {
             },
 
             DisplayMode::FileSelection => {
-                let fs_title = Line::from(" File Selection: ");
+                let fs_title = Line::from(" File Selection: ").bold();
 
                 let fs_instructions = Line::from(vec![
                     " Back ".into(),
