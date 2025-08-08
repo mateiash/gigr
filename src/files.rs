@@ -68,12 +68,20 @@ impl FileSelector {
             self.contents = FileSelector::read_contents(self.running_path.clone());
             self.eval_selection();
     }
-    pub fn act_selection(&mut self) {
+    pub fn move_forwards(&mut self) {
         if !self.is_file {
             self.running_path = self.contents().get(self.selected_entry).unwrap().path();
             self.selected_entry = 0;
             self.contents = FileSelector::read_contents(self.running_path.clone());
             self.eval_selection();
         }
+    }
+    pub fn queue_selection(&self) -> Option<Vec<DirEntry>> {
+        if !self.is_file {
+            let path = self.contents().get(self.selected_entry).unwrap().path().clone();
+            return Some(Self::read_contents(path));
+        }
+
+        return None;
     }
 }

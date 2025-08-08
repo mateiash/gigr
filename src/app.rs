@@ -1,6 +1,6 @@
 use std::io;
 use std::error::Error;
-use std::fs::{read_dir, File};
+use std::fs::{read_dir, DirEntry, File};
 
 use color_eyre::owo_colors::OwoColorize;
 use color_eyre::Result;
@@ -40,6 +40,8 @@ pub struct App {
     player : Player,
     file_selector : FileSelector,
 
+    files_queue : Option<Vec<DirEntry>>,
+
     album_art : Option<StatefulProtocol>,
 }
 
@@ -56,38 +58,34 @@ impl App {
             player : Player::new(),
             file_selector : FileSelector::new(expand_tilde("~/Music")),
 
+            files_queue : None,
+
             album_art : album_art_image,
         }
     }
 
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        let path = expand_tilde("~/Music");
-
-        if path.is_dir() {
-
-            let mut entries: Vec<_> = read_dir(path)
-                .unwrap()
-                .map(|res| res.unwrap())
-                .collect();
-
-            entries.sort_by_key(|dir| dir.path());
-
-
-            for entry in entries {
-                let path = entry.path();
-
-                if path.is_file() {
-                    if let Some(ext) = path.extension() {
-                        if ext == "mp3" || ext == "flac" || ext == "wav" {
-                            let song = Song::new(&path.to_str().unwrap());
-                            self.player.add_to_queue(song);
-                        }
-                    }
-                } 
-            }
-        }
         while !self.exit {
+            match &self.files_queue {
+                Some(entries) => {
+                    for entry in entries {
+                        let path = entry.path();
+
+                        if path.is_file() {
+                            if let Some(ext) = path.extension() {
+                                if ext == "mp3" || ext == "flac" || ext == "wav" {
+                                    let song = Song::new(&path.to_str().unwrap());
+                                    self.player.add_to_queue(song);
+                                }
+                            }
+                        } 
+                    }
+                },
+                None => {},
+            }
+            self.files_queue = None;
+
             match &self.queued_command {
                 Some(command) => {
                     match command {
@@ -150,8 +148,9 @@ impl App {
             match key_event.code {
                 KeyCode::Char('s') => self.file_selector.move_down(),
                 KeyCode::Char('d') => self.file_selector.move_up(),
-                KeyCode::Char('f') => self.file_selector.act_selection(),
+                KeyCode::Char('f') => self.file_selector.move_forwards(),
                 KeyCode::Char('a') => self.file_selector.move_back(),
+                KeyCode::Enter => self.files_queue = self.file_selector.queue_selection(),
 
                 _ => {},
             }

@@ -17,8 +17,6 @@ pub struct Player{
 
     current_song : Option<Song>,
 
-    idle_state : bool,
-
     volume : f32,
 }
 
@@ -37,8 +35,6 @@ impl Player {
 
             current_song : None,
 
-            idle_state : false,
-
             volume : 1.0,
         }
     }
@@ -56,11 +52,9 @@ impl Player {
 
         if self.player_index > self.queue.len() {
             //self.player_index = 0;
-            self.idle_state = true;
+            self.player_index -= 1;
             return;
-        } else {
-            self.idle_state = false;
-        }
+        } 
 
         let song_ref = self.queue.get(self.player_index - 1).unwrap();
 
@@ -73,7 +67,7 @@ impl Player {
     }
 
     pub fn get_metadata(&self, metadata_type : MetadataType) -> String {
-        match self.idle_state {
+        match self.sink.empty() {
             false => {
                 match &self.current_song {
                     Some(curr_song) => {
