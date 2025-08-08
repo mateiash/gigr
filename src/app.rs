@@ -32,12 +32,12 @@ pub struct App<'a> {
 
     player : &'a mut Player,
 
-    album_art : StatefulProtocol,
+    album_art : Option<StatefulProtocol>,
 }
 
 impl<'a> App<'a> {
     pub fn new(player : &'a mut Player) -> Self {
-        let album_art_image = App::load_album_cover().unwrap();
+        let album_art_image = App::load_album_cover();
 
         Self {
             exit : false,
@@ -108,16 +108,23 @@ impl<'a> App<'a> {
         }
     }
 
-    fn load_album_cover() -> Result<StatefulProtocol, Box<dyn Error>> {
-        let picker = Picker::from_query_stdio()?;
+    fn load_album_cover() -> Option<StatefulProtocol> {
+        let picker = Picker::from_query_stdio().unwrap();
 
         // Load an image with the image crate.
-        let dyn_img = image::ImageReader::open(expand_tilde("~/Music/cover.jpg"))?.decode()?.resize(600, 600, FilterType::Gaussian);
+        let dyn_img = image::ImageReader::open(expand_tilde("~/Music/cover.jpg"));//?.decode()?.resize(1800, 1800, FilterType::Gaussian);
 
+        match dyn_img {
+            Ok(img) => {
+                let image = picker.new_resize_protocol(img.decode().unwrap().resize(600, 600, FilterType::Gaussian));
+                return Some(image);
+            }
+            _ => return None,
+        }
         // Create the Protocol which will be used by the widget.
-        let image = picker.new_resize_protocol(dyn_img);
+        
 
-        Ok(image)
+        
     }
 
     fn exit(&mut self) {
@@ -217,11 +224,22 @@ impl<'a> Widget for &mut App<'a> {
                     .title_bottom(album_art_title.centered())
                     .border_set(border::THICK);
 
-                let album_art_inner_area = album_art_block.inner(current_layout[1]);
+                match &self.album_art {
+                    Some(_) => {
+                        let album_art_inner_area = album_art_block.inner(current_layout[1]);
 
-                album_art_block.render(current_layout[1], buf);
+                        album_art_block.render(current_layout[1], buf);
 
-                image.render(album_art_inner_area, buf, &mut self.album_art);
+                        image.render(album_art_inner_area, buf, &mut self.album_art.as_mut().unwrap());
+                    },
+                    None => {
+                        Paragraph::new(Line::from("No cover art."))
+                            .centered()
+                            .block(album_art_block)
+                            .render(current_layout[1], buf);
+                    }
+                }
+                
 
                 let track_info_title = Line::from(" Track info ");
 
