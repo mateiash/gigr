@@ -27,6 +27,7 @@ use crate::song::Song;
 
 #[derive(PartialEq)]
 enum DisplayMode {
+    Title,
     Queue,
     CurrentTrack,
     FileSelection,
@@ -54,7 +55,7 @@ impl App {
             exit : false,
             queued_command : None,
 
-            display_mode : DisplayMode::Queue,
+            display_mode : DisplayMode::Title,
 
             player : Player::new(),
             file_selector : FileSelector::new(expand_tilde("~/Music")),
@@ -239,6 +240,59 @@ impl<'a> Widget for &mut App {
             .render(layout[0], buf);
     
         match self.display_mode {
+            DisplayMode::Title => {
+                let title_block = Block::bordered()
+                    //.title(trck_title.left_aligned())
+                    //.title_bottom(instructions.centered())
+                    .border_set(border::THICK);
+
+                let mut title_lines: Vec<Line<'_>> = Vec::new();
+
+                let line1 = Line::from(vec![
+                        Span::raw("         oo                    ")
+                    ]).blue();
+                title_lines.push(line1);
+
+                let line2 = Line::from(vec![
+                        Span::raw("                               ")
+                    ]).blue();
+                title_lines.push(line2);
+
+                let line3 = Line::from(vec![
+                        Span::raw(".d8888b. dP .d8888b. 88d888b.  ")
+                    ]).blue();
+                title_lines.push(line3);
+
+                let line4 = Line::from(vec![
+                        Span::raw("88'  `88 88 88'  `88 88'  `88  ")
+                    ]).blue();
+                title_lines.push(line4);
+
+                let line5 = Line::from(vec![
+                        Span::raw("88.  .88 88 88.  .88 88        ")
+                    ]).blue();
+                title_lines.push(line5);
+
+                let line6 = Line::from(vec![
+                        Span::raw("`8888P88 dP `8888P88 dP        ")
+                    ]).blue();
+                title_lines.push(line6);
+
+                let line7 = Line::from(vec![
+                        Span::raw("     .88         .88           ")
+                    ]).blue();
+                title_lines.push(line7);
+
+                let line8 = Line::from(vec![
+                        Span::raw(" d8888P      d8888P by mateiash")
+                    ]).blue();
+                title_lines.push(line8);
+
+                Paragraph::new(title_lines)
+                            .centered()
+                            .block(title_block)
+                            .render(layout[1], buf);
+            }
             DisplayMode::Queue => {
                 let trck_title = Line::from(" Next up: ".bold());
 
