@@ -1,6 +1,6 @@
 use std::io;
 use std::error::Error;
-use std::fs::read_dir;
+use std::fs::{read_dir, File};
 
 use color_eyre::Result;
 
@@ -17,6 +17,7 @@ use image::imageops::FilterType;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent};
 
+use crate::files::FileSelector;
 use crate::player::{MetadataType, Player, PlayerCommand};
 use crate::expand_tilde;
 use crate::song::Song;
@@ -34,6 +35,7 @@ pub struct App {
     display_mode : DisplayMode,
 
     player : Player,
+    file_selector : FileSelector,
 
     album_art : Option<StatefulProtocol>,
 }
@@ -49,6 +51,7 @@ impl App {
             display_mode : DisplayMode::Queue,
 
             player : Player::new(),
+            file_selector : FileSelector::new(expand_tilde("~/Music")),
 
             album_art : album_art_image,
         }
@@ -333,12 +336,23 @@ impl<'a> Widget for &mut App {
                 let mut fs_lines: Vec<Line<'_>> = Vec::new();
 
 
-                for n in self.player.player_index..queue_len {
-                    let song = self.player.queue().get(n).unwrap();
-                    let span = Line::from(vec![
-                        Span::raw(format!("  {}", song.title_clone()))
-                    ]);
-                    fs_lines.push(span);
+                for entry in self.file_selector.contents() {
+                    let path = entry.path();
+
+                    if path.is_file() {
+                            let name = path.as_path().to_str().unwrap();
+                            let span = Line::from(vec![
+                                Span::raw(format!("  {}", name))
+                            ]);
+                            fs_lines.push(span);
+                    } 
+                    if path.is_dir() {
+                            let name = path.as_path().to_str().unwrap();
+                            let span = Line::from(vec![
+                                Span::raw(format!("  {}", name)).bold()
+                            ]);
+                            fs_lines.push(span);
+                    } 
                 }
 
 
