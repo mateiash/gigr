@@ -3,13 +3,15 @@ use std::path::{Path, PathBuf};
 use lofty::prelude::{ItemKey};
 use lofty::probe::{Probe};
 use lofty::file::TaggedFileExt;
-
+use lofty::file::AudioFile;
 pub struct Song {
     pub file_path : String,
     
     pub title : String,
     pub artist : String,
     pub album : String,
+    pub samplerate : usize,
+    pub channels : usize,
 }
 
 impl Song {
@@ -38,12 +40,18 @@ impl Song {
                 String::from("-")
             };
 
+            let properties = tagged_file.properties();
+            let sample_rate = properties.sample_rate().unwrap();
+            let cc = properties.channels().unwrap();
+
             Self {
                 file_path : file_path.to_string(),
                 //source : Decoder::try_from(buffered).unwrap(),
                 title : title,
                 artist : artist,
                 album : album,
+                samplerate : sample_rate.try_into().unwrap(),
+                channels : cc.try_into().unwrap(),
 
             }
         } else {
@@ -54,6 +62,8 @@ impl Song {
                 title : String::from("-"),
                 artist : String::from("-"),
                 album : String::from("-"),
+                samplerate : 44100,
+                channels : 2,
 
             }
         }

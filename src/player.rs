@@ -2,11 +2,17 @@ use std::io::BufReader;
 
 use std::fs::File;
 
+use color_eyre::eyre::Error;
 use rodio::OutputStream;
 use rodio::Sink;
 use rodio::Decoder;
 
+use rustfft::{FftPlanner, num_complex::Complex};
+
 use crate::song::Song;
+use crate::expand_tilde;
+
+const EQ_BUFFER_SIZE : usize = 512;
 
 pub struct Player{
     stream_handle : OutputStream,
@@ -18,6 +24,8 @@ pub struct Player{
     current_song : Option<Song>,
 
     volume : f32,
+
+    fft_planner : FftPlanner<f32>,
 }
 
 impl Player {
@@ -36,6 +44,8 @@ impl Player {
             current_song : None,
 
             volume : 1.0,
+
+            fft_planner : FftPlanner::new(),
         }
     }
 
@@ -162,6 +172,122 @@ impl Player {
             Some(song) => return Some(song),
             None => return None,
         }
+    }
+
+    pub fn eq_bands(&mut self, n_bands : i32) -> Option<Vec<f32>>{
+        if self.sink.empty() {
+            return None;
+        }
+        
+        let start : usize = (self.sink.get_pos().as_millis() as usize) * 
+                            self.current_song.as_ref().unwrap().samplerate * self.current_song.as_ref().unwrap().channels / 1000;
+        
+        let file = File::open(expand_tilde(&self.current_song().unwrap().file_path_clone())).unwrap();
+
+
+        let decoder = Decoder::new(BufReader::new(file)).unwrap();
+        let waveform : Vec<f32> = decoder
+        .skip(start)
+        .take(EQ_BUFFER_SIZE*2)
+        .collect();
+
+        let left_channel : Vec<f32> = waveform
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &val)| if i % 2 == 0 { Some(val) } else { None })
+            .collect();
+
+        let mut buffer: Vec<Complex<f32>> = left_channel
+        .iter()
+        .map(|&re| Complex { re, im: 0.0 })
+        .collect();
+
+        // Step 2: Create an FFT planner and plan FFT of the size of input
+        let fft = self.fft_planner.plan_fft_forward(buffer.len());
+
+        // Step 3: Perform FFT in-place on buffer
+        fft.process(&mut buffer);
+
+        // buffer now contains the frequency domain representation (complex numbers)
+
+        // You can, for example, get magnitudes like this:
+        let magnitudes: Vec<f32> = buffer.iter()
+            .map(|c| c.norm())  // norm() gives magnitude of the complex number
+            .collect();
+
+        //println!("Magnitudes: {}", magnitudes.len());
+
+            /* 
+        let samples = decoder  // unwrap the Result, discard errors
+            .map(|sample| Sample::to_f32(&sample))
+            .take(FFT_SIZE)
+            .collect();
+
+    */  return
+            Some(Self::split_into_bands(&magnitudes, 44100.0, EQ_BUFFER_SIZE, n_bands as usize).unwrap());
+    }
+
+    fn split_into_bands(
+        magnitudes: &[f32],
+        sample_rate: f32,
+        fft_size: usize,
+        n_bands: usize,
+    ) -> Option<Vec<f32>> {
+        // Nyquist frequency
+        let nyquist = sample_rate / 2.0;
+
+        // Frequency resolution per bin
+        let freq_per_bin = nyquist / magnitudes.len() as f32;
+
+        // We'll use logarithmic bands to better capture musical perception
+        let min_freq: f32 = 20.0;
+        let max_freq: f32 = nyquist;
+
+        let log_min = min_freq.ln();
+        let log_max = max_freq.ln();
+        let band_edges: Vec<f32> = (0..=n_bands)
+            .map(|i| {
+                let t = i as f32 / n_bands as f32;
+                (log_min + t * (log_max - log_min)).exp()
+            })
+            .collect();
+
+        let mut bands = vec![0.0; n_bands];
+        let mut counts = vec![0usize; n_bands];
+
+        // Assign FFT bins to bands
+        for (i, &mag) in magnitudes.iter().enumerate() {
+            let freq = i as f32 * freq_per_bin;
+            if freq < min_freq || freq > max_freq {
+                continue;
+            }
+
+            if let Some(band) = band_edges
+                .windows(2)
+                .position(|w| freq >= w[0] && freq < w[1])
+            {
+                bands[band] += mag;
+                counts[band] += 1;
+            }
+        }
+
+        // Average magnitudes per band
+        for (b, &count) in bands.iter_mut().zip(&counts) {
+            if count > 0 {
+                *b /= count as f32;
+            }
+        }
+
+        // Normalize to 0–1 range
+        if let Some(&max_val) = bands.iter().max_by(|a, b| a.partial_cmp(b).unwrap()) {
+            if max_val > 0.0 {
+                for b in &mut bands {
+                    *b /= max_val;
+                }
+            }
+        }
+
+        Some(bands)
     }
 
 }

@@ -1,6 +1,7 @@
 use std::io;
 use std::fs::DirEntry;
 use std::path::PathBuf;
+use std::slice::GetDisjointMutError;
 
 use color_eyre::Result;
 
@@ -351,6 +352,13 @@ impl<'a> Widget for &mut App {
                     }
                 }
                 
+                let current_layout_info = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints(vec![
+                        Constraint::Length(7),
+                        Constraint::Min(0),
+                    ])
+                    .split(current_layout[0]);
 
                 let track_info_title = Line::from(" Track info ");
 
@@ -394,9 +402,55 @@ impl<'a> Widget for &mut App {
                 Paragraph::new(track_info_lines)
                     .centered()
                     .block(track_info_block)
-                    .render(current_layout[0], buf);
+                    .render(current_layout_info[0], buf);
 
+                // EQ
+
+                let track_eq_block = Block::bordered()
+                    //.title(curr_trck_dis_title.left_aligned())
+                    .title_bottom(Line::from(" EQ ").centered())
+                    .border_set(border::THICK);
                 
+                let width: f32 = 36f32;
+                let height: f32 = 22f32;
+
+                match self.player.eq_bands(36) {
+                    Some(bands) => {
+
+                        let mut eq_chars: Vec<Line<'_>> = Vec::new();
+
+                        for i in 0..height.round() as isize{
+                            let mut line = String::from("");
+                            for j in 0..bands.len() {
+                                let element = *bands.get(j).unwrap();
+                                if element > 1f32 - (i+1) as f32 *1f32/height {
+                                    line.push('▮');
+                                    line.push('▮');
+                                } else { 
+                                    line.push(' ');
+                                    line.push(' ');
+                                }
+                            }
+                            let name_span = Line::from(vec![
+                                    Span::raw(format!("{}", line)).blue()
+                                ]);
+                            eq_chars.push(name_span);
+                        }
+
+                        Paragraph::new(eq_chars)
+                            .centered()
+                            .block(track_eq_block)
+                            .render(current_layout_info[1], buf);
+                    },
+                    None => {
+                        Paragraph::new(Line::from(vec![
+                            Span::raw("No freq. info.")
+                        ]))
+                            .centered()
+                            .block(track_eq_block)
+                            .render(current_layout_info[1], buf);
+                    }
+                }
         
             },
 

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 rodio = "0.21.0"
+rustfft = "6.4.0"
 ratatui = "0.29.0"
 ratatui-image = "8.0.1"
 image = "0.25.6"
