@@ -26,6 +26,8 @@ pub struct Player{
     volume : f32,
 
     fft_planner : FftPlanner<f32>,
+
+    decoder : Option<Vec<f32>>,
 }
 
 impl Player {
@@ -46,6 +48,8 @@ impl Player {
             volume : 1.0,
 
             fft_planner : FftPlanner::new(),
+
+            decoder : None,
         }
     }
 
@@ -71,9 +75,15 @@ impl Player {
         self.current_song = Some(Song::new(&song_ref.file_path_clone()));
 
         let file = File::open(song_ref.file_path.clone()).unwrap();
+
+        
         let buffered = BufReader::new(file);
         let source: Decoder<BufReader<File>> = Decoder::try_from(buffered).unwrap();
         self.sink.append(source);
+
+        let file = File::open(expand_tilde(&self.current_song().unwrap().file_path_clone())).unwrap();
+        self.decoder = Some( Decoder::new(BufReader::new(file)).unwrap().collect() );
+
         return true;
     }
 
@@ -184,16 +194,14 @@ impl Player {
         let start : usize = (self.sink.get_pos().as_millis() as usize) * 
                             song_ref.samplerate * song_ref.channels / 1000;
         
-        let file = File::open(expand_tilde(&self.current_song().unwrap().file_path_clone())).unwrap();
-
-
-        let decoder = Decoder::new(BufReader::new(file)).unwrap();
-        let left_channel : Vec<f32> = decoder
-        .skip(start)
-        .take(EQ_BUFFER_SIZE*2)
-        .enumerate()
-        .filter_map(|(i, val)| if i % 2 == 0 { Some(val) } else { None })
-        .collect();
+        let decoder = self.decoder.clone().unwrap();
+        let left_channel : Vec<f32> = decoder.iter()
+            .skip(start)
+            .take(EQ_BUFFER_SIZE*2)
+            .enumerate()
+            .filter_map(|(i, val)| if i % song_ref.channels == 0 { Some(val) } else { None })
+            .map(|value| return *value)
+            .collect();
         /* 
         let left_channel : Vec<f32> = waveform
             .iter()
