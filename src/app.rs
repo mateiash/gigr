@@ -419,7 +419,7 @@ impl<'a> Widget for &mut App {
 
                         let mut eq_chars: Vec<Line<'_>> = Vec::new();
 
-                        for i in 0..height.round() as isize{
+                        for i in 0..height.round() as isize - 1{
                             let mut line = String::from("");
                             for j in 0..bands.len() {
                                 let element = *bands.get(j).unwrap();
@@ -436,6 +436,17 @@ impl<'a> Widget for &mut App {
                                 ]);
                             eq_chars.push(name_span);
                         }
+
+                        let mut line = String::from("");
+                        for _ in 0..bands.len() {
+                            line.push('▮');
+                            line.push('▮');
+                            
+                        }
+                        let name_span = Line::from(vec![
+                            Span::raw(format!("{}", line)).blue()
+                            ]);
+                        eq_chars.push(name_span);
 
                         Paragraph::new(eq_chars)
                             .centered()

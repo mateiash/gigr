@@ -179,36 +179,37 @@ impl Player {
             return None;
         }
         
+        let song_ref = self.current_song.as_ref().unwrap();
+
         let start : usize = (self.sink.get_pos().as_millis() as usize) * 
-                            self.current_song.as_ref().unwrap().samplerate * self.current_song.as_ref().unwrap().channels / 1000;
+                            song_ref.samplerate * song_ref.channels / 1000;
         
         let file = File::open(expand_tilde(&self.current_song().unwrap().file_path_clone())).unwrap();
 
 
         let decoder = Decoder::new(BufReader::new(file)).unwrap();
-        let waveform : Vec<f32> = decoder
+        let left_channel : Vec<f32> = decoder
         .skip(start)
         .take(EQ_BUFFER_SIZE*2)
+        .enumerate()
+        .filter_map(|(i, val)| if i % 2 == 0 { Some(val) } else { None })
         .collect();
-
+        /* 
         let left_channel : Vec<f32> = waveform
             .iter()
             .enumerate()
             .filter_map(|(i, &val)| if i % 2 == 0 { Some(val) } else { None })
             .collect();
-
+        */
         let mut buffer: Vec<Complex<f32>> = left_channel
         .iter()
         .map(|&re| Complex { re, im: 0.0 })
         .collect();
 
-        // Step 2: Create an FFT planner and plan FFT of the size of input
         let fft = self.fft_planner.plan_fft_forward(buffer.len());
 
-        // Step 3: Perform FFT in-place on buffer
         fft.process(&mut buffer);
 
-        // buffer now contains the frequency domain representation (complex numbers)
 
         // You can, for example, get magnitudes like this:
         let magnitudes: Vec<f32> = buffer.iter()
@@ -233,13 +234,10 @@ impl Player {
         fft_size: usize,
         n_bands: usize,
     ) -> Option<Vec<f32>> {
-        // Nyquist frequency
         let nyquist = sample_rate / 2.0;
 
-        // Frequency resolution per bin
         let freq_per_bin = nyquist / magnitudes.len() as f32;
 
-        // We'll use logarithmic bands to better capture musical perception
         let min_freq: f32 = 20.0;
         let max_freq: f32 = nyquist;
 
@@ -255,7 +253,6 @@ impl Player {
         let mut bands = vec![0.0; n_bands];
         let mut counts = vec![0usize; n_bands];
 
-        // Assign FFT bins to bands
         for (i, &mag) in magnitudes.iter().enumerate() {
             let freq = i as f32 * freq_per_bin;
             if freq < min_freq || freq > max_freq {
@@ -271,14 +268,12 @@ impl Player {
             }
         }
 
-        // Average magnitudes per band
         for (b, &count) in bands.iter_mut().zip(&counts) {
             if count > 0 {
                 *b /= count as f32;
             }
         }
 
-        // Normalize to 0–1 range
         if let Some(&max_val) = bands.iter().max_by(|a, b| a.partial_cmp(b).unwrap()) {
             if max_val > 0.0 {
                 for b in &mut bands {
