@@ -94,8 +94,7 @@ impl App {
                     match command {
                         PlayerCommand::Prev => {self.player.return_last_song();},
                         PlayerCommand::Skip => {self.player.skip_current_song();},
-                        PlayerCommand::VolumeUp => {self.player.change_volume(0.05);},
-                        PlayerCommand::VolumeDown => {self.player.change_volume(-0.05);},
+                        PlayerCommand::VolumeChange(amt) => {self.player.change_volume(*amt);},
                         PlayerCommand::PlayPause => {self.player.play_pause();},
                     }
                 },
@@ -141,8 +140,8 @@ impl App {
             // PLAYER EVENTS
             KeyCode::Char('q') => self.exit(),
             KeyCode::Char('h') => self.queued_command = Some(PlayerCommand::Prev),
-            KeyCode::Char('j') => self.queued_command = Some(PlayerCommand::VolumeDown),
-            KeyCode::Char('k') => self.queued_command = Some(PlayerCommand::VolumeUp),
+            KeyCode::Char('j') => self.queued_command = Some(PlayerCommand::VolumeChange(-0.05)),
+            KeyCode::Char('k') => self.queued_command = Some(PlayerCommand::VolumeChange(0.05)),
             KeyCode::Char('l') => self.queued_command = Some(PlayerCommand::Skip),
             KeyCode::Char(' ') => self.queued_command = Some(PlayerCommand::PlayPause),
 
@@ -202,6 +201,7 @@ impl<'a> Widget for &mut App {
         let playing : bool = self.player.playing();
         let queue_len : usize = self.player.queue().len();
         let playback_time = self.player.playback_time();
+        let total_time = self.player.total_time();
 
 
         let layout = Layout::default()
@@ -238,9 +238,13 @@ impl<'a> Widget for &mut App {
 
         let np_playback_time = Text::from(vec![Line::from(vec![
             match playback_time.1 < 10 {
-                true => Span::raw(format!("{}:0{}   ", playback_time.0, playback_time.1)),
-                false => Span::raw(format!("{}:{}   ", playback_time.0, playback_time.1)),
-            }
+                true => Span::raw(format!("{}:0{} / ", playback_time.0, playback_time.1)),
+                false => Span::raw(format!("{}:{} / ", playback_time.0, playback_time.1)),
+            },
+            match total_time.1 < 10 {
+                true => Span::raw(format!("{}:0{}   ", total_time.0, total_time.1)),
+                false => Span::raw(format!("{}:{}   ", total_time.0, total_time.1)),
+            },
             
         ])]);
 

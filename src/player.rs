@@ -1,11 +1,13 @@
 use std::io::BufReader;
 
 use std::fs::File;
+use std::time::Duration;
 
 use rodio::OutputStream;
 use rodio::Sink;
 use rodio::Decoder;
 
+use rodio::Source;
 use rustfft::{FftPlanner, num_complex::Complex};
 
 use crate::song::Song;
@@ -27,6 +29,8 @@ pub struct Player{
     fft_planner : FftPlanner<f32>,
 
     decoder : Option<Vec<f32>>,
+
+    current_song_duration : Option<Duration>,
 }
 
 impl Player {
@@ -49,6 +53,8 @@ impl Player {
             fft_planner : FftPlanner::new(),
 
             decoder : None,
+
+            current_song_duration : None,
         }
     }
 
@@ -78,6 +84,7 @@ impl Player {
         
         let buffered = BufReader::new(file);
         let source: Decoder<BufReader<File>> = Decoder::try_from(buffered).unwrap();
+        self.current_song_duration = source.total_duration().clone();
         self.sink.append(source);
 
         let file = File::open(expand_tilde(&self.current_song().unwrap().file_path_clone())).unwrap();
@@ -299,6 +306,20 @@ impl Player {
         (mins, secs)
     }
 
+    pub fn total_time(&self) -> (usize, usize) {
+        if let Some(duration) = &self.current_song_duration{
+            let secs_total : usize = duration.as_secs() as usize;
+        
+            let mins : usize = secs_total / 60;
+            let secs : usize = secs_total % 60;
+
+            return (mins, secs);
+        }
+
+        return (0, 61);
+        
+    }
+
 }
 
 #[derive(Debug)]
@@ -306,8 +327,7 @@ pub enum PlayerCommand {
     Skip,
     Prev,
     PlayPause,
-    VolumeUp,
-    VolumeDown,
+    VolumeChange(f32),
 }
 
 pub enum MetadataType {
