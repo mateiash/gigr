@@ -1,7 +1,6 @@
 use std::io;
 use std::fs::DirEntry;
 use std::path::PathBuf;
-use std::slice::GetDisjointMutError;
 
 use color_eyre::Result;
 
@@ -202,6 +201,7 @@ impl<'a> Widget for &mut App {
         let song_artist: String = self.player.get_metadata(MetadataType::TrackArtist);
         let playing : bool = self.player.playing();
         let queue_len : usize = self.player.queue().len();
+        let playback_time = self.player.playback_time();
 
 
         let layout = Layout::default()
@@ -233,14 +233,27 @@ impl<'a> Widget for &mut App {
 
         let np_counter_text = Text::from(vec![Line::from(vec![
             Span::raw(format!("   {}", song_title)),
+            
         ])]);
 
+        let np_playback_time = Text::from(vec![Line::from(vec![
+            match playback_time.1 < 10 {
+                true => Span::raw(format!("{}:0{}   ", playback_time.0, playback_time.1)),
+                false => Span::raw(format!("{}:{}   ", playback_time.0, playback_time.1)),
+            }
+            
+        ])]);
 
         Paragraph::new(np_counter_text)
             .left_aligned()
+            .block(np_block.clone())
+            .render(layout[0], buf);
+
+        Paragraph::new(np_playback_time)
+            .right_aligned()
             .block(np_block)
             .render(layout[0], buf);
-    
+
         match self.display_mode {
             DisplayMode::Title => {
                 let title_block = Block::bordered()

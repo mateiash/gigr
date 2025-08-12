@@ -2,7 +2,6 @@ use std::io::BufReader;
 
 use std::fs::File;
 
-use color_eyre::eyre::Error;
 use rodio::OutputStream;
 use rodio::Sink;
 use rodio::Decoder;
@@ -218,10 +217,8 @@ impl Player {
 
         fft.process(&mut buffer);
 
-
-        // You can, for example, get magnitudes like this:
         let magnitudes: Vec<f32> = buffer.iter()
-            .map(|c| c.norm())  // norm() gives magnitude of the complex number
+            .map(|c| c.norm())  
             .collect();
 
         //println!("Magnitudes: {}", magnitudes.len());
@@ -233,7 +230,7 @@ impl Player {
             .collect();
 
     */  return
-            Some(Self::split_into_bands(&magnitudes, 44100.0, EQ_BUFFER_SIZE, n_bands as usize).unwrap());
+            Some(Self::split_into_bands(&magnitudes, song_ref.samplerate as f32, EQ_BUFFER_SIZE, n_bands as usize).unwrap());
     }
 
     fn split_into_bands(
@@ -291,6 +288,15 @@ impl Player {
         }
 
         Some(bands)
+    }
+
+    pub fn playback_time(&self) -> (usize, usize) {
+        let secs_total : usize = self.sink.get_pos().as_secs() as usize;
+        
+        let mins : usize = secs_total / 60;
+        let secs : usize = secs_total % 60;
+
+        (mins, secs)
     }
 
 }
