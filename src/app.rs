@@ -24,6 +24,9 @@ use crate::player::{MetadataType, Player, PlayerCommand};
 use crate::expand_tilde;
 use crate::song::Song;
 
+const EQ_POS_CHAR : char = '■';
+const EQ_NEG_CHAR : char = ' ';
+
 #[derive(PartialEq)]
 enum DisplayMode {
     Title,
@@ -411,24 +414,33 @@ impl<'a> Widget for &mut App {
                     .title_bottom(Line::from(" EQ ").centered())
                     .border_set(border::THICK);
                 
-                let width: f32 = 36f32;
-                let height: f32 = 22f32;
+                let width: f32 = (current_layout_info[1].width - 2) as f32;
+                let height: f32 = (current_layout_info[1].height - 2) as f32;
 
-                match self.player.eq_bands(36) {
+                match self.player.eq_bands(width as i32) {
                     Some(bands) => {
 
                         let mut eq_chars: Vec<Line<'_>> = Vec::new();
 
-                        for i in 0..height.round() as isize - 1{
+                        for _ in 0..2 {
+                            let mut line = String::from("");
+                            for _ in 0..bands.len() {
+                                line.push(EQ_NEG_CHAR);                            
+                            }
+                            let name_span = Line::from(vec![
+                                Span::raw(format!("{}", line)).blue()
+                                ]);
+                            eq_chars.push(name_span);
+                        }
+
+                        for i in 0..height.round() as isize - 3{
                             let mut line = String::from("");
                             for j in 0..bands.len() {
                                 let element = *bands.get(j).unwrap();
                                 if element > 1f32 - (i+1) as f32 *1f32/height {
-                                    line.push('▮');
-                                    line.push('▮');
+                                    line.push(EQ_POS_CHAR);
                                 } else { 
-                                    line.push(' ');
-                                    line.push(' ');
+                                    line.push(EQ_NEG_CHAR);
                                 }
                             }
                             let name_span = Line::from(vec![
@@ -439,9 +451,7 @@ impl<'a> Widget for &mut App {
 
                         let mut line = String::from("");
                         for _ in 0..bands.len() {
-                            line.push('▮');
-                            line.push('▮');
-                            
+                            line.push(EQ_POS_CHAR);                            
                         }
                         let name_span = Line::from(vec![
                             Span::raw(format!("{}", line)).blue()

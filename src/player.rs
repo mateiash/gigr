@@ -12,7 +12,7 @@ use rustfft::{FftPlanner, num_complex::Complex};
 use crate::song::Song;
 use crate::expand_tilde;
 
-const EQ_BUFFER_SIZE : usize = 512;
+const EQ_BUFFER_SIZE : usize = 2048;
 
 pub struct Player{
     stream_handle : OutputStream,
