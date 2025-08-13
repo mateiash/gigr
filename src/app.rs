@@ -1,5 +1,5 @@
 use std::io;
-use std::fs::DirEntry;
+use std::fs::{DirEntry, read_dir};
 use std::path::PathBuf;
 
 use color_eyre::Result;
@@ -50,7 +50,7 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        let album_art_image = App::load_album_cover(expand_tilde("~/Music/cover.jpg"));
+        let album_art_image = App::load_album_cover(expand_tilde("~/Music"));
 
         Self {
             exit : false,
@@ -108,7 +108,6 @@ impl App {
             if update {
                 let mut img_path = self.player.current_song().unwrap().file_path_as_path();
                 img_path.pop();
-                img_path.push("Cover.jpg");
                 self.album_art = App::load_album_cover(
                     img_path
                 );
@@ -169,19 +168,35 @@ impl App {
         }
     }
 
-    fn load_album_cover(path : PathBuf) -> Option<StatefulProtocol> {
-        let picker = Picker::from_query_stdio().unwrap();
+    fn load_album_cover(dir_path : PathBuf) -> Option<StatefulProtocol> {
+        let mut entries = read_dir(dir_path)
+            .unwrap()
+            .map(|res| res.unwrap());
 
-        // Load an image with the image crate.
-        let dyn_img = image::ImageReader::open(path);
 
-        match dyn_img {
-            Ok(img) => {
-                let image = picker.new_resize_protocol(img.decode().unwrap().resize(600, 600, FilterType::Gaussian));
-                return Some(image);
-            }
-            _ => return None,
+        for entry in entries {
+            let path = entry.path();
+
+                if path.is_file() {
+                    if let Some(ext) = path.extension() {
+                        if ext == "jpg" || ext == "png" {
+                            let picker = Picker::from_query_stdio().unwrap();
+
+                            let dyn_img = image::ImageReader::open(path);
+
+                            match dyn_img {
+                                Ok(img) => {
+                                    let image = picker.new_resize_protocol(img.decode().unwrap().resize(600, 600, FilterType::Gaussian));
+                                    return Some(image);
+                                }
+                                _ => {},
+                            }
+                        }
+                    } 
+                }
         }
+        
+        return None;
         
     }
 
