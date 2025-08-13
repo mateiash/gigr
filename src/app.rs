@@ -50,7 +50,7 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        let album_art_image = App::load_album_cover(expand_tilde("~/Music"));
+        //let album_art_image = App::load_album_cover(expand_tilde("~/Music"));
 
         Self {
             exit : false,
@@ -63,7 +63,7 @@ impl App {
 
             files_queue : None,
 
-            album_art : album_art_image,
+            album_art : None,
         }
     }
 
