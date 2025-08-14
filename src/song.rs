@@ -2,7 +2,7 @@ use std::path::{PathBuf};
 
 use lofty::prelude::{ItemKey};
 use lofty::probe::{Probe};
-use lofty::file::{TaggedFile, TaggedFileExt};
+use lofty::file::{TaggedFileExt};
 use lofty::file::AudioFile;
 pub struct Song {
     pub file_path : String,

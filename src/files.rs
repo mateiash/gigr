@@ -1,7 +1,6 @@
-use std::collections::btree_map::Entry;
-use std::{fs::DirEntry, path::PathBuf};
+use std::{path::PathBuf};
 
-use std::fs::{read_dir, ReadDir};
+use std::fs::{read_dir};
 
 use color_eyre::eyre::Error;
 
@@ -17,13 +16,11 @@ pub struct FileSelector {
 
 impl FileSelector {
     pub fn new(start_path : PathBuf) -> Self {
-        let mut path = start_path.clone();
-
         let contents = 
         match Self::read_contents(start_path.clone()) {
             Ok(res) => res,
             _ => {
-                path = expand_tilde("~/");
+                let path = expand_tilde("~/");
                 Self::read_contents(path.clone()).unwrap()
             }
         };
@@ -104,6 +101,11 @@ impl FileSelector {
             return Some(Self::read_contents(path).unwrap());
         }
 
-        return None;
+        let file_vec : Vec<PathBuf> = vec![
+            self.contents().get(self.selected_entry).unwrap().clone()
+        ];
+
+        return Some(file_vec);
+
     }
 }

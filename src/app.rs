@@ -1,5 +1,5 @@
 use std::io;
-use std::fs::{DirEntry, read_dir};
+use std::fs::{read_dir};
 use std::path::PathBuf;
 
 use color_eyre::Result;
@@ -167,7 +167,7 @@ impl App {
     }
 
     fn load_album_cover(dir_path : PathBuf) -> Option<StatefulProtocol> {
-        let mut entries = read_dir(dir_path)
+        let entries = read_dir(dir_path)
             .unwrap()
             .map(|res| res.unwrap());
 
