@@ -1,3 +1,4 @@
+use std::collections::btree_map::Entry;
 use std::{fs::DirEntry, path::PathBuf};
 
 use std::fs::{read_dir, ReadDir};
@@ -8,7 +9,7 @@ use crate::expand_tilde;
 
 pub struct FileSelector {
     running_path : PathBuf,
-    contents : Vec<DirEntry>,
+    contents : Vec<PathBuf>,
 
     selected_entry : usize,
     is_file : bool,
@@ -36,23 +37,30 @@ impl FileSelector {
         }
     }
     
-    fn read_contents(path : PathBuf) -> Result<Vec<DirEntry>, Error> {
+    fn read_contents(path : PathBuf) -> Result<Vec<PathBuf>, Error> {
         let mut entries: Vec<_> = read_dir(path)?
             .map(|res| res.unwrap())
             .collect();
 
         entries.sort_by_key(|dir| dir.path());
 
-        return Ok(entries);
+        let mut paths_vec : Vec<PathBuf> = Vec::new();
+
+        for entry in entries {
+            let path = entry.path();
+            paths_vec.push(path);
+        }
+
+        return Ok(paths_vec);
 
     }
 
     fn eval_selection(&mut self) {
         let entry = self.contents.get(self.selected_entry).unwrap();
-        self.is_file = entry.path().is_file();
+        self.is_file = entry.is_file();
     } 
 
-    pub fn contents(&self) -> &Vec<DirEntry>{
+    pub fn contents(&self) -> &Vec<PathBuf>{
         return &self.contents;
     }
 
@@ -84,15 +92,15 @@ impl FileSelector {
     }
     pub fn move_forwards(&mut self) {
         if !self.is_file {
-            self.running_path = self.contents().get(self.selected_entry).unwrap().path();
+            self.running_path = self.contents().get(self.selected_entry).unwrap().clone();
             self.selected_entry = 0;
             self.contents = FileSelector::read_contents(self.running_path.clone()).unwrap();
             self.eval_selection();
         }
     }
-    pub fn queue_selection(&self) -> Option<Vec<DirEntry>> {
+    pub fn queue_selection(&self) -> Option<Vec<PathBuf>> {
         if !self.is_file {
-            let path = self.contents().get(self.selected_entry).unwrap().path().clone();
+            let path = self.contents().get(self.selected_entry).unwrap().clone();
             return Some(Self::read_contents(path).unwrap());
         }
 

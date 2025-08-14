@@ -43,7 +43,7 @@ pub struct App {
     player : Player,
     file_selector : FileSelector,
 
-    files_queue : Option<Vec<DirEntry>>,
+    files_queue : Option<Vec<PathBuf>>,
 
     album_art : Option<StatefulProtocol>,
 }
@@ -72,9 +72,7 @@ impl App {
         while !self.exit {
             match &self.files_queue {
                 Some(entries) => {
-                    for entry in entries {
-                        let path = entry.path();
-
+                    for path in entries {
                         if path.is_file() {
                             if let Some(ext) = path.extension() {
                                 if ext == "mp3" || ext == "flac" || ext == "wav" {
@@ -529,8 +527,7 @@ impl<'a> Widget for &mut App {
                 let file_entries = self.file_selector.contents();
 
                 for n in 0..file_entries.len() {
-                    let entry = file_entries.get(n).unwrap();
-                    let path = entry.path();
+                    let path = file_entries.get(n).unwrap();
                     let name = path.as_path().to_str().unwrap();
                     let mut span = 
                                 Span::raw(format!("  {}", name));
