@@ -1,16 +1,16 @@
+use std::fs::read_dir;
 use std::io;
-use std::fs::{read_dir};
 use std::path::PathBuf;
 
 use color_eyre::Result;
 
+use ratatui::prelude::{Buffer, Constraint, Direction, Layout, Line, Rect, StatefulWidget, Text};
 use ratatui::style::Modifier;
+use ratatui::text::Span;
+use ratatui::widgets::{Block, Paragraph, Widget};
 use ratatui::{DefaultTerminal, Frame, style::Stylize, symbols::border};
-use ratatui::widgets::{Widget, Block, Paragraph};
-use ratatui::prelude::{Rect, Buffer, Line, Text, Layout, Direction, Constraint, StatefulWidget};
-use ratatui::text::{Span};
 
-use ratatui_image::{picker::Picker, StatefulImage, protocol::StatefulProtocol};
+use ratatui_image::{StatefulImage, picker::Picker, protocol::StatefulProtocol};
 
 use image;
 use image::imageops::FilterType;
@@ -18,13 +18,13 @@ use image::imageops::FilterType;
 use crossterm::event;
 use crossterm::event::{Event, KeyCode, KeyEvent};
 
+use crate::expand_tilde;
 use crate::files::FileSelector;
 use crate::player::{MetadataType, Player, PlayerCommand};
-use crate::expand_tilde;
 use crate::song::Song;
 
-const EQ_POS_CHAR : char = '■';
-const EQ_NEG_CHAR : char = ' ';
+const EQ_POS_CHAR: char = '■';
+const EQ_NEG_CHAR: char = ' ';
 
 #[derive(PartialEq)]
 enum DisplayMode {
@@ -36,16 +36,16 @@ enum DisplayMode {
 
 pub struct App {
     exit: bool,
-    queued_command : Option<PlayerCommand>,
+    queued_command: Option<PlayerCommand>,
 
-    display_mode : DisplayMode,
+    display_mode: DisplayMode,
 
-    player : Player,
-    file_selector : FileSelector,
+    player: Player,
+    file_selector: FileSelector,
 
-    files_queue : Option<Vec<PathBuf>>,
+    files_queue: Option<Vec<PathBuf>>,
 
-    album_art : Option<StatefulProtocol>,
+    album_art: Option<StatefulProtocol>,
 }
 
 impl App {
@@ -53,17 +53,17 @@ impl App {
         //let album_art_image = App::load_album_cover(expand_tilde("~/Music"));
 
         Self {
-            exit : false,
-            queued_command : None,
+            exit: false,
+            queued_command: None,
 
-            display_mode : DisplayMode::Title,
+            display_mode: DisplayMode::Title,
 
-            player : Player::new(),
-            file_selector : FileSelector::new(expand_tilde("~/Music")),
+            player: Player::new(),
+            file_selector: FileSelector::new(expand_tilde("~/Music")),
 
-            files_queue : None,
+            files_queue: None,
 
-            album_art : None,
+            album_art: None,
         }
     }
 
@@ -80,35 +80,38 @@ impl App {
                                     self.player.add_to_queue(song);
                                 }
                             }
-                        } 
+                        }
                     }
-                },
-                None => {},
+                }
+                None => {}
             }
             self.files_queue = None;
 
             match &self.queued_command {
-                Some(command) => {
-                    match command {
-                        PlayerCommand::Prev => {self.player.return_last_song();},
-                        PlayerCommand::Skip => {self.player.skip_current_song();},
-                        PlayerCommand::VolumeChange(amt) => {self.player.change_volume(*amt);},
-                        PlayerCommand::PlayPause => {self.player.play_pause();},
+                Some(command) => match command {
+                    PlayerCommand::Prev => {
+                        self.player.return_last_song();
+                    }
+                    PlayerCommand::Skip => {
+                        self.player.skip_current_song();
+                    }
+                    PlayerCommand::VolumeChange(amt) => {
+                        self.player.change_volume(*amt);
+                    }
+                    PlayerCommand::PlayPause => {
+                        self.player.play_pause();
                     }
                 },
-                None => {},
+                None => {}
             }
 
             self.queued_command = None;
-            let update : bool = self.player.update();
-
+            let update: bool = self.player.update();
 
             if update {
                 let mut img_path = self.player.current_song().unwrap().file_path_as_path();
                 img_path.pop();
-                self.album_art = App::load_album_cover(
-                    img_path
-                );
+                self.album_art = App::load_album_cover(img_path);
             }
 
             terminal.draw(|frame| self.draw(frame))?;
@@ -122,13 +125,12 @@ impl App {
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
-
         if crossterm::event::poll(std::time::Duration::from_millis(200))? {
             if let Event::Key(key) = event::read()? {
                 self.handle_key_event(key);
             }
         }
-        
+
         Ok(())
     }
 
@@ -144,12 +146,11 @@ impl App {
 
             // UI
             // DISPLAY MODE SELECTION
-
             KeyCode::Char('p') => self.display_mode = DisplayMode::CurrentTrack,
             KeyCode::Char('o') => self.display_mode = DisplayMode::Queue,
             KeyCode::Char('i') => self.display_mode = DisplayMode::FileSelection,
 
-            _ => { self.queued_command = None},
+            _ => self.queued_command = None,
         }
 
         // FILE SELECTION
@@ -161,70 +162,65 @@ impl App {
                 KeyCode::Char('a') => self.file_selector.move_back(),
                 KeyCode::Enter => self.files_queue = self.file_selector.queue_selection(),
 
-                _ => {},
+                _ => {}
             }
         }
     }
 
-    fn load_album_cover(dir_path : PathBuf) -> Option<StatefulProtocol> {
-        let entries = read_dir(dir_path)
-            .unwrap()
-            .map(|res| res.unwrap());
-
+    fn load_album_cover(dir_path: PathBuf) -> Option<StatefulProtocol> {
+        let entries = read_dir(dir_path).unwrap().map(|res| res.unwrap());
 
         for entry in entries {
             let path = entry.path();
 
-                if path.is_file() {
-                    if let Some(ext) = path.extension() {
-                        if ext == "jpg" || ext == "png" {
-                            let picker = Picker::from_query_stdio().unwrap();
+            if path.is_file() {
+                if let Some(ext) = path.extension() {
+                    if ext == "jpg" || ext == "png" {
+                        let picker = Picker::from_query_stdio().unwrap();
 
-                            let dyn_img = image::ImageReader::open(path);
+                        let dyn_img = image::ImageReader::open(path);
 
-                            match dyn_img {
-                                Ok(img) => {
-                                    let image = picker.new_resize_protocol(img.decode().unwrap().resize(600, 600, FilterType::Gaussian));
-                                    return Some(image);
-                                }
-                                _ => {},
+                        match dyn_img {
+                            Ok(img) => {
+                                let image = picker.new_resize_protocol(
+                                    img.decode().unwrap().resize(600, 600, FilterType::Gaussian),
+                                );
+                                return Some(image);
                             }
+                            _ => {}
                         }
-                    } 
+                    }
                 }
+            }
         }
-        
+
         return None;
-        
     }
 
     fn exit(&mut self) {
         self.exit = true;
     }
-    
 }
 
 impl<'a> Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        
-        let volume : u8 = (self.player.volume()*100.0).round() as u8;
+        let volume: u8 = (self.player.volume() * 100.0).round() as u8;
         let song_title: String = self.player.get_metadata(MetadataType::Title);
         let song_album: String = self.player.get_metadata(MetadataType::Album);
         let song_artist: String = self.player.get_metadata(MetadataType::TrackArtist);
-        let playing : bool = self.player.playing();
-        let queue_len : usize = self.player.queue().len();
+        let playing: bool = self.player.playing();
+        let queue_len: usize = self.player.queue().len();
         let playback_time = self.player.playback_time();
         let total_time = self.player.total_time();
 
-
         let layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(vec![
-            Constraint::Length(3),
-            Constraint::Min(0),
-            Constraint::Length(3),
-        ])
-        .split(area);
+            .direction(Direction::Vertical)
+            .constraints(vec![
+                Constraint::Length(3),
+                Constraint::Min(0),
+                Constraint::Length(3),
+            ])
+            .split(area);
 
         // NOW PLAYING ELEMENT
 
@@ -244,10 +240,10 @@ impl<'a> Widget for &mut App {
             .title_bottom(mode_instructions.centered())
             .border_set(border::THICK);
 
-        let np_counter_text = Text::from(vec![Line::from(vec![
-            Span::raw(format!("   {}", song_title)),
-            
-        ])]);
+        let np_counter_text = Text::from(vec![Line::from(vec![Span::raw(format!(
+            "   {}",
+            song_title
+        ))])]);
 
         let np_playback_time = Text::from(vec![Line::from(vec![
             match playback_time.1 < 10 {
@@ -258,7 +254,6 @@ impl<'a> Widget for &mut App {
                 true => Span::raw(format!("{}:0{}   ", total_time.0, total_time.1)),
                 false => Span::raw(format!("{}:{}   ", total_time.0, total_time.1)),
             },
-            
         ])]);
 
         Paragraph::new(np_counter_text)
@@ -280,72 +275,49 @@ impl<'a> Widget for &mut App {
 
                 let mut title_lines: Vec<Line<'_>> = Vec::new();
 
-                let line1 = Line::from(vec![
-                        Span::raw("         oo                    ")
-                    ]).blue();
+                let line1 = Line::from(vec![Span::raw("         oo                    ")]).blue();
                 title_lines.push(line1);
 
-                let line2 = Line::from(vec![
-                        Span::raw("                               ")
-                    ]).blue();
+                let line2 = Line::from(vec![Span::raw("                               ")]).blue();
                 title_lines.push(line2);
 
-                let line3 = Line::from(vec![
-                        Span::raw(".d8888b. dP .d8888b. 88d888b.  ")
-                    ]).blue();
+                let line3 = Line::from(vec![Span::raw(".d8888b. dP .d8888b. 88d888b.  ")]).blue();
                 title_lines.push(line3);
 
-                let line4 = Line::from(vec![
-                        Span::raw("88'  `88 88 88'  `88 88'  `88  ")
-                    ]).blue();
+                let line4 = Line::from(vec![Span::raw("88'  `88 88 88'  `88 88'  `88  ")]).blue();
                 title_lines.push(line4);
 
-                let line5 = Line::from(vec![
-                        Span::raw("88.  .88 88 88.  .88 88        ")
-                    ]).blue();
+                let line5 = Line::from(vec![Span::raw("88.  .88 88 88.  .88 88        ")]).blue();
                 title_lines.push(line5);
 
-                let line6 = Line::from(vec![
-                        Span::raw("`8888P88 dP `8888P88 dP        ")
-                    ]).blue();
+                let line6 = Line::from(vec![Span::raw("`8888P88 dP `8888P88 dP        ")]).blue();
                 title_lines.push(line6);
 
-                let line7 = Line::from(vec![
-                        Span::raw("     .88         .88           ")
-                    ]).blue();
+                let line7 = Line::from(vec![Span::raw("     .88         .88           ")]).blue();
                 title_lines.push(line7);
 
-                let line8 = Line::from(vec![
-                        Span::raw(" d8888P      d8888P by mateiash")
-                    ]).blue();
+                let line8 = Line::from(vec![Span::raw(" d8888P      d8888P by mateiash")]).blue();
                 title_lines.push(line8);
 
-                let wl = Line::from(vec![
-                        Span::raw("")
-                    ]).blue();
+                let wl = Line::from(vec![Span::raw("")]).blue();
                 title_lines.push(wl);
 
-                let line9 = Line::from(vec![
-                        Span::raw(env!("CARGO_PKG_VERSION"))
-                    ]).blue();
+                let line9 = Line::from(vec![Span::raw(env!("CARGO_PKG_VERSION"))]).blue();
                 title_lines.push(line9);
-                 
+
                 Paragraph::new(title_lines)
-                            .centered()
-                            .block(title_block)
-                            .render(layout[1], buf);
+                    .centered()
+                    .block(title_block)
+                    .render(layout[1], buf);
             }
             DisplayMode::Queue => {
                 let trck_title = Line::from(" Next up: ".bold());
 
                 let mut track_lines: Vec<Line<'_>> = Vec::new();
 
-
                 for n in self.player.player_index..queue_len {
                     let song = self.player.queue().get(n).unwrap();
-                    let span = Line::from(vec![
-                        Span::raw(format!("  {}", song.title_clone()))
-                    ]);
+                    let span = Line::from(vec![Span::raw(format!("  {}", song.title_clone()))]);
                     track_lines.push(span);
                 }
 
@@ -353,20 +325,17 @@ impl<'a> Widget for &mut App {
                     .title(trck_title.left_aligned())
                     //.title_bottom(instructions.centered())
                     .border_set(border::THICK);
-                
+
                 Paragraph::new(track_lines)
                     .left_aligned()
                     .block(trck_block)
                     .render(layout[1], buf);
-                    },
-            
+            }
+
             DisplayMode::CurrentTrack => {
                 let current_layout = Layout::default()
                     .direction(Direction::Horizontal)
-                    .constraints(vec![
-                        Constraint::Percentage(55),
-                        Constraint::Percentage(45),
-                    ])
+                    .constraints(vec![Constraint::Percentage(55), Constraint::Percentage(45)])
                     .split(layout[1]);
 
                 let curr_trck_dis_title = Line::from(" Current track: ".bold());
@@ -385,8 +354,12 @@ impl<'a> Widget for &mut App {
 
                         album_art_block.render(current_layout[1], buf);
 
-                        image.render(album_art_inner_area, buf, &mut self.album_art.as_mut().unwrap());
-                    },
+                        image.render(
+                            album_art_inner_area,
+                            buf,
+                            &mut self.album_art.as_mut().unwrap(),
+                        );
+                    }
                     None => {
                         Paragraph::new(Line::from("No cover art."))
                             .centered()
@@ -394,46 +367,32 @@ impl<'a> Widget for &mut App {
                             .render(current_layout[1], buf);
                     }
                 }
-                
+
                 let current_layout_info = Layout::default()
                     .direction(Direction::Vertical)
-                    .constraints(vec![
-                        Constraint::Length(7),
-                        Constraint::Min(0),
-                    ])
+                    .constraints(vec![Constraint::Length(7), Constraint::Min(0)])
                     .split(current_layout[0]);
 
                 let track_info_title = Line::from(" Track info ");
 
                 let mut track_info_lines: Vec<Line<'_>> = Vec::new();
-                
+
                 // LINES IN TRACK INFO
 
-                let name_span = Line::from(vec![
-                        Span::raw(format!("Title: {}", song_title))
-                    ]);
+                let name_span = Line::from(vec![Span::raw(format!("Title: {}", song_title))]);
                 track_info_lines.push(name_span);
 
-                let blank_line = Line::from(vec![
-                        Span::raw(" ")
-                    ]);
+                let blank_line = Line::from(vec![Span::raw(" ")]);
                 track_info_lines.push(blank_line);
 
-                let artist_span = Line::from(vec![
-                        Span::raw(format!("Artist: {}", song_artist))
-                    ]);
+                let artist_span = Line::from(vec![Span::raw(format!("Artist: {}", song_artist))]);
                 track_info_lines.push(artist_span);
 
-                let blank_line = Line::from(vec![
-                        Span::raw(" ")
-                    ]);
+                let blank_line = Line::from(vec![Span::raw(" ")]);
                 track_info_lines.push(blank_line);
 
-                let album_span = Line::from(vec![
-                        Span::raw(format!("Album: {}", song_album))
-                    ]);
+                let album_span = Line::from(vec![Span::raw(format!("Album: {}", song_album))]);
                 track_info_lines.push(album_span);
-
 
                 // END OF LINES IN TRACK INFO
 
@@ -453,67 +412,57 @@ impl<'a> Widget for &mut App {
                     //.title(curr_trck_dis_title.left_aligned())
                     .title_bottom(Line::from(" EQ ").centered())
                     .border_set(border::THICK);
-                
+
                 let width: f32 = (current_layout_info[1].width - 2) as f32;
                 let height: f32 = (current_layout_info[1].height - 2) as f32;
 
                 match self.player.eq_bands(width as i32) {
                     Some(bands) => {
-
                         let mut eq_chars: Vec<Line<'_>> = Vec::new();
 
                         for _ in 0..2 {
                             let mut line = String::from("");
                             for _ in 0..bands.len() {
-                                line.push(EQ_NEG_CHAR);                            
+                                line.push(EQ_NEG_CHAR);
                             }
-                            let name_span = Line::from(vec![
-                                Span::raw(format!("{}", line)).blue()
-                                ]);
+                            let name_span = Line::from(vec![Span::raw(format!("{}", line)).blue()]);
                             eq_chars.push(name_span);
                         }
 
-                        for i in 0..height.round() as isize - 3{
+                        for i in 0..height.round() as isize - 3 {
                             let mut line = String::from("");
                             for j in 0..bands.len() {
                                 let element = *bands.get(j).unwrap();
-                                if element > 1f32 - (i+1) as f32 *1f32/height {
+                                if element > 1f32 - (i + 1) as f32 * 1f32 / height {
                                     line.push(EQ_POS_CHAR);
-                                } else { 
+                                } else {
                                     line.push(EQ_NEG_CHAR);
                                 }
                             }
-                            let name_span = Line::from(vec![
-                                    Span::raw(format!("{}", line)).blue()
-                                ]);
+                            let name_span = Line::from(vec![Span::raw(format!("{}", line)).blue()]);
                             eq_chars.push(name_span);
                         }
 
                         let mut line = String::from("");
                         for _ in 0..bands.len() {
-                            line.push(EQ_POS_CHAR);                            
+                            line.push(EQ_POS_CHAR);
                         }
-                        let name_span = Line::from(vec![
-                            Span::raw(format!("{}", line)).blue()
-                            ]);
+                        let name_span = Line::from(vec![Span::raw(format!("{}", line)).blue()]);
                         eq_chars.push(name_span);
 
                         Paragraph::new(eq_chars)
                             .centered()
                             .block(track_eq_block)
                             .render(current_layout_info[1], buf);
-                    },
+                    }
                     None => {
-                        Paragraph::new(Line::from(vec![
-                            Span::raw("No freq. info.")
-                        ]))
+                        Paragraph::new(Line::from(vec![Span::raw("No freq. info.")]))
                             .centered()
                             .block(track_eq_block)
                             .render(current_layout_info[1], buf);
                     }
                 }
-        
-            },
+            }
 
             DisplayMode::FileSelection => {
                 let fs_title = Line::from(" File Selection: ").bold();
@@ -539,44 +488,42 @@ impl<'a> Widget for &mut App {
                 for n in 0..file_entries.len() {
                     let path = file_entries.get(n).unwrap();
                     let name = path.as_path().to_str().unwrap();
-                    let mut span = 
-                                Span::raw(format!("  {}", name));
+                    let mut span = Span::raw(format!("  {}", name));
 
                     if path.is_dir() {
                         span = span.add_modifier(Modifier::BOLD);
-                    } 
+                    }
 
                     if n == selected_entry {
                         span = span.blue();
                     }
 
-                    let line = Line::from(vec![
-                            span
-                    ]);
+                    let line = Line::from(vec![span]);
                     fs_lines.push(line);
                 }
-
 
                 let fs_block = Block::bordered()
                     .title(fs_title.left_aligned())
                     .title_bottom(fs_instructions.centered())
                     .border_set(border::THICK);
 
-                let scroll : isize = self.file_selector.selected_entry() as isize - 1;
-                
+                let scroll: isize = self.file_selector.selected_entry() as isize - 1;
+
                 Paragraph::new(fs_lines)
                     .left_aligned()
                     .scroll((
-                        (scroll*(scroll.is_positive() as isize)).try_into().unwrap()
-                        , 0))
+                        (scroll * (scroll.is_positive() as isize))
+                            .try_into()
+                            .unwrap(),
+                        0,
+                    ))
                     .block(fs_block)
                     .render(layout[1], buf);
-            },
-            
+            }
         }
 
         // CONTROLS ELEMENT
-    
+
         let ctrl_title = Line::from(" Controls: ".bold());
         let instructions = Line::from(vec![
             " Prev ".into(),
@@ -596,22 +543,27 @@ impl<'a> Widget for &mut App {
             .title_bottom(instructions.centered())
             .border_set(border::THICK);
 
-        let ctrl_counter_text = Text::from(vec![Line::from(vec![
-        //Spans::from(Span::raw(format!("  Volume: {}%", volume))),
-        Span::raw(format!("  {} - Volume: {}%",
-            match playing {
-                true => {"Playing".to_string()}
-                false => {"Paused ".to_string()}
-            }, volume))
-        ])]
-            //self.counter.to_string().yellow(),
+        let ctrl_counter_text = Text::from(
+            vec![Line::from(vec![
+                //Spans::from(Span::raw(format!("  Volume: {}%", volume))),
+                Span::raw(format!(
+                    "  {} - Volume: {}%",
+                    match playing {
+                        true => {
+                            "Playing".to_string()
+                        }
+                        false => {
+                            "Paused ".to_string()
+                        }
+                    },
+                    volume
+                )),
+            ])], //self.counter.to_string().yellow(),
         );
-        
+
         Paragraph::new(ctrl_counter_text)
             .centered()
             .block(ctrl_block)
             .render(layout[2], buf);
-        
-
     }
 }

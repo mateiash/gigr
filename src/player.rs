@@ -3,62 +3,62 @@ use std::io::BufReader;
 use std::fs::File;
 use std::time::Duration;
 
+use rodio::Decoder;
 use rodio::OutputStream;
 use rodio::Sink;
-use rodio::Decoder;
 
 use rodio::Source;
 use rustfft::{FftPlanner, num_complex::Complex};
 
-use crate::song::Song;
 use crate::expand_tilde;
+use crate::song::Song;
 
-const EQ_BUFFER_SIZE : usize = 2048;
+const EQ_BUFFER_SIZE: usize = 2048;
 
-pub struct Player{
-    stream_handle : OutputStream,
-    sink : Sink,
+pub struct Player {
+    stream_handle: OutputStream,
+    sink: Sink,
 
-    queue : Vec<Song>,
-    pub player_index : usize,
+    queue: Vec<Song>,
+    pub player_index: usize,
 
-    current_song : Option<Song>,
+    current_song: Option<Song>,
 
-    volume : f32,
+    volume: f32,
 
-    fft_planner : FftPlanner<f32>,
+    fft_planner: FftPlanner<f32>,
 
-    decoder : Option<Vec<f32>>,
+    decoder: Option<Vec<f32>>,
 
-    current_song_duration : Option<Duration>,
+    current_song_duration: Option<Duration>,
 }
 
 impl Player {
-    pub fn new() -> Self{
-        let stream_handle = rodio::OutputStreamBuilder::open_default_stream()
-        .expect("open default audio stream");
+    pub fn new() -> Self {
+        let stream_handle =
+            rodio::OutputStreamBuilder::open_default_stream().expect("open default audio stream");
         let sink = rodio::Sink::connect_new(&stream_handle.mixer());
-        
+
         Self {
-            sink : sink,
-            stream_handle : stream_handle,
+            sink: sink,
+            stream_handle: stream_handle,
 
-            queue : Vec::new(),
-            player_index : 0,
+            queue: Vec::new(),
+            player_index: 0,
 
-            current_song : None,
+            current_song: None,
 
-            volume : 1.0,
+            volume: 1.0,
 
-            fft_planner : FftPlanner::new(),
+            fft_planner: FftPlanner::new(),
 
-            decoder : None,
+            decoder: None,
 
-            current_song_duration : None,
+            current_song_duration: None,
         }
     }
 
-    pub fn add_to_queue(&mut self, song : Song) -> () {
+    pub fn add_to_queue(&mut self, song: Song) -> () {
         self.queue.push(song);
     }
 
@@ -73,7 +73,7 @@ impl Player {
             //self.player_index = 0;
             self.player_index -= 1;
             return false;
-        } 
+        }
 
         let song_ref = self.queue.get(self.player_index - 1).unwrap();
 
@@ -81,38 +81,35 @@ impl Player {
 
         let file = File::open(song_ref.file_path.clone()).unwrap();
 
-        
         let buffered = BufReader::new(file);
         let source: Decoder<BufReader<File>> = Decoder::try_from(buffered).unwrap();
         self.current_song_duration = source.total_duration().clone();
         self.sink.append(source);
 
-        let file = File::open(expand_tilde(&self.current_song().unwrap().file_path_clone())).unwrap();
-        self.decoder = Some( Decoder::new(BufReader::new(file)).unwrap().collect() );
+        let file = File::open(expand_tilde(
+            &self.current_song().unwrap().file_path_clone(),
+        ))
+        .unwrap();
+        self.decoder = Some(Decoder::new(BufReader::new(file)).unwrap().collect());
 
         return true;
     }
 
-    pub fn get_metadata(&self, metadata_type : MetadataType) -> String {
+    pub fn get_metadata(&self, metadata_type: MetadataType) -> String {
         match self.sink.empty() {
-            false => {
-                match &self.current_song {
-                    Some(curr_song) => {
-                        match metadata_type {
-                            MetadataType::Album => return curr_song.album_clone(),
-                            MetadataType::Title => return curr_song.title_clone(),
-                            MetadataType::TrackArtist => return curr_song.artist_clone(),
-                        }
-                        
-                    
-                    },
-                    None => {return "Nothing".to_string();},
+            false => match &self.current_song {
+                Some(curr_song) => match metadata_type {
+                    MetadataType::Album => return curr_song.album_clone(),
+                    MetadataType::Title => return curr_song.title_clone(),
+                    MetadataType::TrackArtist => return curr_song.artist_clone(),
+                },
+                None => {
+                    return "Nothing".to_string();
                 }
-                
             },
             true => {
                 return "Nothing".to_string();
-            },
+            }
         }
     }
 
@@ -139,15 +136,15 @@ impl Player {
         }
 
         match self.player_index {
-            0 => {},
-            1 => {self.player_index = 0},
-            _ => {self.player_index -= 2},
+            0 => {}
+            1 => self.player_index = 0,
+            _ => self.player_index -= 2,
         }
-        
+
         self.sink.skip_one();
     }
 
-    fn set_volume(&mut self, volume : f32) -> () {
+    fn set_volume(&mut self, volume: f32) -> () {
         if volume > 1.0 {
             self.volume = 1.0;
             self.sink.set_volume(1.0);
@@ -160,7 +157,7 @@ impl Player {
         }
     }
 
-    pub fn change_volume(&mut self, amount : f32) -> () {
+    pub fn change_volume(&mut self, amount: f32) -> () {
         self.set_volume(self.volume + amount);
     }
 
@@ -170,8 +167,12 @@ impl Player {
 
     pub fn play_pause(&self) -> () {
         match self.sink.is_paused() {
-            true => {self.sink.play();},
-            false => {self.sink.pause();},
+            true => {
+                self.sink.play();
+            }
+            false => {
+                self.sink.pause();
+            }
         }
     }
 
@@ -184,31 +185,39 @@ impl Player {
     }
 
     pub fn current_song(&self) -> Option<&Song> {
-        match &self.current_song{
+        match &self.current_song {
             Some(song) => return Some(song),
             None => return None,
         }
     }
 
-    pub fn eq_bands(&mut self, n_bands : i32) -> Option<Vec<f32>>{
+    pub fn eq_bands(&mut self, n_bands: i32) -> Option<Vec<f32>> {
         if self.sink.empty() {
             return None;
         }
-        
+
         let song_ref = self.current_song.as_ref().unwrap();
 
-        let start : usize = (self.sink.get_pos().as_millis() as usize) * 
-                            song_ref.samplerate * song_ref.channels / 1000;
-        
+        let start: usize =
+            (self.sink.get_pos().as_millis() as usize) * song_ref.samplerate * song_ref.channels
+                / 1000;
+
         let decoder = self.decoder.clone().unwrap();
-        let left_channel : Vec<f32> = decoder.iter()
+        let left_channel: Vec<f32> = decoder
+            .iter()
             .skip(start)
-            .take(EQ_BUFFER_SIZE*2)
+            .take(EQ_BUFFER_SIZE * 2)
             .enumerate()
-            .filter_map(|(i, val)| if i % song_ref.channels == 0 { Some(val) } else { None })
+            .filter_map(|(i, val)| {
+                if i % song_ref.channels == 0 {
+                    Some(val)
+                } else {
+                    None
+                }
+            })
             .map(|value| return *value)
             .collect();
-        /* 
+        /*
         let left_channel : Vec<f32> = waveform
             .iter()
             .enumerate()
@@ -216,28 +225,34 @@ impl Player {
             .collect();
         */
         let mut buffer: Vec<Complex<f32>> = left_channel
-        .iter()
-        .map(|&re| Complex { re, im: 0.0 })
-        .collect();
+            .iter()
+            .map(|&re| Complex { re, im: 0.0 })
+            .collect();
 
         let fft = self.fft_planner.plan_fft_forward(buffer.len());
 
         fft.process(&mut buffer);
 
-        let magnitudes: Vec<f32> = buffer.iter()
-            .map(|c| c.norm())  
-            .collect();
+        let magnitudes: Vec<f32> = buffer.iter().map(|c| c.norm()).collect();
 
         //println!("Magnitudes: {}", magnitudes.len());
 
-            /* 
-        let samples = decoder  // unwrap the Result, discard errors
-            .map(|sample| Sample::to_f32(&sample))
-            .take(FFT_SIZE)
-            .collect();
+        /*
+            let samples = decoder  // unwrap the Result, discard errors
+                .map(|sample| Sample::to_f32(&sample))
+                .take(FFT_SIZE)
+                .collect();
 
-    */  return
-            Some(Self::split_into_bands(&magnitudes, song_ref.samplerate as f32, EQ_BUFFER_SIZE, n_bands as usize).unwrap());
+        */
+        return Some(
+            Self::split_into_bands(
+                &magnitudes,
+                song_ref.samplerate as f32,
+                EQ_BUFFER_SIZE,
+                n_bands as usize,
+            )
+            .unwrap(),
+        );
     }
 
     fn split_into_bands(
@@ -298,28 +313,26 @@ impl Player {
     }
 
     pub fn playback_time(&self) -> (usize, usize) {
-        let secs_total : usize = self.sink.get_pos().as_secs() as usize;
-        
-        let mins : usize = secs_total / 60;
-        let secs : usize = secs_total % 60;
+        let secs_total: usize = self.sink.get_pos().as_secs() as usize;
+
+        let mins: usize = secs_total / 60;
+        let secs: usize = secs_total % 60;
 
         (mins, secs)
     }
 
     pub fn total_time(&self) -> (usize, usize) {
-        if let Some(duration) = &self.current_song_duration{
-            let secs_total : usize = duration.as_secs() as usize;
-        
-            let mins : usize = secs_total / 60;
-            let secs : usize = secs_total % 60;
+        if let Some(duration) = &self.current_song_duration {
+            let secs_total: usize = duration.as_secs() as usize;
+
+            let mins: usize = secs_total / 60;
+            let secs: usize = secs_total % 60;
 
             return (mins, secs);
         }
 
         return (0, 61);
-        
     }
-
 }
 
 #[derive(Debug)]

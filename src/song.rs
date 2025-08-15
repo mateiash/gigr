@@ -1,21 +1,21 @@
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
-use lofty::prelude::{ItemKey};
-use lofty::probe::{Probe};
-use lofty::file::{TaggedFileExt};
 use lofty::file::AudioFile;
+use lofty::file::TaggedFileExt;
+use lofty::prelude::ItemKey;
+use lofty::probe::Probe;
 pub struct Song {
-    pub file_path : String,
-    
-    pub title : String,
-    pub artist : String,
-    pub album : String,
-    pub samplerate : usize,
-    pub channels : usize,
+    pub file_path: String,
+
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub samplerate: usize,
+    pub channels: usize,
 }
 
 impl Song {
-    pub fn new(file_path : &str) -> Self {
+    pub fn new(file_path: &str) -> Self {
         //let buffered = BufReader::new(file);
         let path = std::path::Path::new(&file_path);
         match Probe::open(path).unwrap().read() {
@@ -33,7 +33,7 @@ impl Song {
                         String::from("-")
                     };
 
-                    let album= if let Some(album) = tag.get_string(&ItemKey::AlbumTitle) {
+                    let album = if let Some(album) = tag.get_string(&ItemKey::AlbumTitle) {
                         album.to_string()
                     } else {
                         String::from("-")
@@ -44,60 +44,54 @@ impl Song {
                     let cc = properties.channels().unwrap();
 
                     return Self {
-                        file_path : file_path.to_string(),
+                        file_path: file_path.to_string(),
                         //source : Decoder::try_from(buffered).unwrap(),
-                        title : title,
-                        artist : artist,
-                        album : album,
-                        samplerate : sample_rate.try_into().unwrap(),
-                        channels : cc.try_into().unwrap(),
-
+                        title: title,
+                        artist: artist,
+                        album: album,
+                        samplerate: sample_rate.try_into().unwrap(),
+                        channels: cc.try_into().unwrap(),
                     };
                 } else {
-
                     return Self {
-                        file_path : file_path.to_string(),
+                        file_path: file_path.to_string(),
                         //source : Decoder::try_from(buffered).unwrap(),
-                        title : String::from("-"),
-                        artist : String::from("-"),
-                        album : String::from("-"),
-                        samplerate : 44100,
-                        channels : 2,
-
+                        title: String::from("-"),
+                        artist: String::from("-"),
+                        album: String::from("-"),
+                        samplerate: 44100,
+                        channels: 2,
                     };
                 }
             }
             _ => {
                 return Self {
-                        file_path : file_path.to_string(),
-                        //source : Decoder::try_from(buffered).unwrap(),
-                        title : String::from("-"),
-                        artist : String::from("-"),
-                        album : String::from("-"),
-                        samplerate : 44100,
-                        channels : 2,
-
-                    };
+                    file_path: file_path.to_string(),
+                    //source : Decoder::try_from(buffered).unwrap(),
+                    title: String::from("-"),
+                    artist: String::from("-"),
+                    album: String::from("-"),
+                    samplerate: 44100,
+                    channels: 2,
+                };
             }
-
-                
         }
     }
 
-    pub fn title_clone(&self) -> String{
+    pub fn title_clone(&self) -> String {
         return self.title.clone();
     }
-    pub fn album_clone(&self) -> String{
+    pub fn album_clone(&self) -> String {
         return self.album.clone();
     }
-    pub fn artist_clone(&self) -> String{
+    pub fn artist_clone(&self) -> String {
         return self.artist.clone();
     }
 
-    pub fn file_path_clone(&self) -> String{
+    pub fn file_path_clone(&self) -> String {
         return self.file_path.clone();
     }
-    pub fn file_path_as_path(&self) -> PathBuf{
+    pub fn file_path_as_path(&self) -> PathBuf {
         return PathBuf::from(&self.file_path);
     }
 }

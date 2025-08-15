@@ -1,23 +1,22 @@
-use std::{path::PathBuf};
+use std::path::PathBuf;
 
-use std::fs::{read_dir};
+use std::fs::read_dir;
 
 use color_eyre::eyre::Error;
 
 use crate::expand_tilde;
 
 pub struct FileSelector {
-    running_path : PathBuf,
-    contents : Vec<PathBuf>,
+    running_path: PathBuf,
+    contents: Vec<PathBuf>,
 
-    selected_entry : usize,
-    is_file : bool,
+    selected_entry: usize,
+    is_file: bool,
 }
 
 impl FileSelector {
-    pub fn new(start_path : PathBuf) -> Self {
-        let contents = 
-        match Self::read_contents(start_path.clone()) {
+    pub fn new(start_path: PathBuf) -> Self {
+        let contents = match Self::read_contents(start_path.clone()) {
             Ok(res) => res,
             _ => {
                 let path = expand_tilde("~/");
@@ -26,22 +25,20 @@ impl FileSelector {
         };
 
         Self {
-            running_path : start_path.clone(),
-            contents : contents,
-            
-            selected_entry : 0,
-            is_file : true,
+            running_path: start_path.clone(),
+            contents: contents,
+
+            selected_entry: 0,
+            is_file: true,
         }
     }
-    
-    fn read_contents(path : PathBuf) -> Result<Vec<PathBuf>, Error> {
-        let mut entries: Vec<_> = read_dir(path)?
-            .map(|res| res.unwrap())
-            .collect();
+
+    fn read_contents(path: PathBuf) -> Result<Vec<PathBuf>, Error> {
+        let mut entries: Vec<_> = read_dir(path)?.map(|res| res.unwrap()).collect();
 
         entries.sort_by_key(|dir| dir.path());
 
-        let mut paths_vec : Vec<PathBuf> = Vec::new();
+        let mut paths_vec: Vec<PathBuf> = Vec::new();
 
         for entry in entries {
             let path = entry.path();
@@ -49,15 +46,14 @@ impl FileSelector {
         }
 
         return Ok(paths_vec);
-
     }
 
     fn eval_selection(&mut self) {
         let entry = self.contents.get(self.selected_entry).unwrap();
         self.is_file = entry.is_file();
-    } 
+    }
 
-    pub fn contents(&self) -> &Vec<PathBuf>{
+    pub fn contents(&self) -> &Vec<PathBuf> {
         return &self.contents;
     }
 
@@ -82,10 +78,10 @@ impl FileSelector {
         self.eval_selection();
     }
     pub fn move_back(&mut self) {
-            self.running_path.pop();
-            self.selected_entry = 0;
-            self.contents = FileSelector::read_contents(self.running_path.clone()).unwrap();
-            self.eval_selection();
+        self.running_path.pop();
+        self.selected_entry = 0;
+        self.contents = FileSelector::read_contents(self.running_path.clone()).unwrap();
+        self.eval_selection();
     }
     pub fn move_forwards(&mut self) {
         if !self.is_file {
@@ -101,11 +97,9 @@ impl FileSelector {
             return Some(Self::read_contents(path).unwrap());
         }
 
-        let file_vec : Vec<PathBuf> = vec![
-            self.contents().get(self.selected_entry).unwrap().clone()
-        ];
+        let file_vec: Vec<PathBuf> =
+            vec![self.contents().get(self.selected_entry).unwrap().clone()];
 
         return Some(file_vec);
-
     }
 }
