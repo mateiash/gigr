@@ -11,18 +11,21 @@
  d8888P      d8888P by mateiash
 ```
 
+![Screenshot](assets/gigr-screenshot.png)
+
 `gigr` is a command-line interface tool for playing music, written in Rust. It's simple, but development has not yet been completed :D! There are more features planned.
 
-The program allows you to select directories from which to play supported audio formats (`flac`, `wav` and `mp3`), adding them in a queue. If the directory of the currently playing song contains a `Cover.jpg` file, album artwork will be displayed.
+The program allows you to select directories and individual files from which to play supported audio in supported formats (`flac`, `wav` and `mp3`), adding them in a queue. If the directory of the currently playing song contains a file in `png` or `jpg` format, it will be displayed as album artwork.
 
 ## Features:
 * Queue-based playback
 * Album art display
-* Multiple navigation modes
-* Simple keyboard controls
-* GNU/Linux support
+* An EQ-like visualizer for viewing the frequencies of a song while it's playing
+* Multiple modes
+* Simple, keyboard exclusive controls
+* Linux support
 
-## Commands:
+## Commands
 ### Basic playback:
 * `h` - jump to previous track
 * `j` - volume down
@@ -41,12 +44,10 @@ The program allows you to select directories from which to play supported audio 
 * `f` - move inside selected directory
 * `Enter` - add files inside selected directory to the queue
 
-(Support for adding individual files to the queue is coming soon!)
-
-### Building
+## Building
 
 This project is intended for use on GNU/Linux systems and can be built with Cargo.
-To build, ensure you have Rust installed, then run:
+To build, clone this repo, ensure you have Rust and Cargo installed, then run:
 
 ```
 cargo build --release
