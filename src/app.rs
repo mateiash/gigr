@@ -320,6 +320,16 @@ impl<'a> Widget for &mut App {
                     ]).blue();
                 title_lines.push(line8);
 
+                let wl = Line::from(vec![
+                        Span::raw("")
+                    ]).blue();
+                title_lines.push(wl);
+
+                let line9 = Line::from(vec![
+                        Span::raw(env!("CARGO_PKG_VERSION"))
+                    ]).blue();
+                title_lines.push(line9);
+                 
                 Paragraph::new(title_lines)
                             .centered()
                             .block(title_block)
