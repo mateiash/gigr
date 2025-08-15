@@ -20,7 +20,7 @@ The program allows you to select directories and individual files from which to 
 ### ⚠️ Important!
 `gigr` is dependent on [ALSA](https://www.alsa-project.org/). For audio playback to function, you must install the respective packages for your system. (eg. if you are using Pipewire on Arch Linux, you must install `pipewire-alsa`)
 
-## Features:
+## Features
 * Queue-based playback
 * Album art display
 * An EQ-like visualizer for viewing the frequencies of a song while it's playing
